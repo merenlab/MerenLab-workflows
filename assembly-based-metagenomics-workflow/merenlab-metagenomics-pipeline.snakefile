@@ -1,5 +1,7 @@
 #If it doesn't already exist then create a 00_LOGS folder
 import os
+import anvio
+import anvio.utils as u
 
 __author__ = "Alon Shaiber"
 __copyright__ = "Copyright 2017, The anvio Project"
@@ -15,7 +17,6 @@ configfile: "config.json"
 
 # loading the samples.txt file 
 samples_txt_file = config["samples_txt"]
-import anvio.utils as u
 fastq_files = u.get_TAB_delimited_file_as_dictionary(samples_txt_file)
 SAMPLES = set(fastq_files.keys())
 
