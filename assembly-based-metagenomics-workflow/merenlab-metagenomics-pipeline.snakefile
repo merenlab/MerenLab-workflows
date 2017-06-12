@@ -61,7 +61,31 @@ rule gen_contigs_db:
 
 rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
+    # consider runnig this as a shadow rule
     version: 1.0
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     output: "04_MAPPING/{sample}-contigs"
     shell: "bowtie-build {input} {output}" 
+
+rule bowtie:
+    """ Run mapping with bowtie2,  sort and convert to bam with samtools"""
+    version: 1.0
+    input: rules.bowtie_build.output
+    output: {sample}.bam
+    params: 
+        threads = {cluster.n},
+        r1 = rules.megahit.input.r1
+        r2 = rules.megahit.input.r2
+        sam = "{sample}.sam"
+        raw_bam = "{sample}-RAW.bam"
+        dir = "04_MAPPING/{sample}"
+    shadow: "shallow" # By making this rule a shadow rule, we don't need to cleanup the sam file and the raw.bam file.
+    shell:
+    """
+    bowtie2 --threads {params.threads} -x {input} -1 {params.r1} -2 {params.r2} --no-unal -S {params.dir}/{params.sam}
+    samtools view -F 4 -bS {params.dir}/{params.sam} > {params.dir}/{params.raw_bam}
+    """
+
+rule samtools_view:
+    """ sort sam file with samtools"""
+
