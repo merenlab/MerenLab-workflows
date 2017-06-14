@@ -1,4 +1,6 @@
 {
     "samples_txt": "samples.txt",
-    "remove_human_contamination": "no"
+    "remove_human_contamination": "no",
+    "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "",
+    "CLUSTER_CONTIGS": "--cluster-contigs"
 }

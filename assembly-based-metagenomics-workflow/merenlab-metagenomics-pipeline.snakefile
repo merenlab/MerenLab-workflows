@@ -20,9 +20,11 @@ samples_txt_file = config["samples_txt"]
 fastq_files = u.get_TAB_delimited_file_as_dictionary(samples_txt_file)
 SAMPLES = set(fastq_files.keys())
 
+MAPPING_DIR = "04_MAPPING"
+PROFILE_DIR = "05_ANVIO_PROFILE"
 
 rule all:
-    input: expand("03_CONTIGS/{sample}-contigs.db", sample=SAMPLES)
+    input: expand("{DIR}/{sample}", DIR=PROFILE_DIR, sample=SAMPLES)
 
 rule megahit:
     version: 1.0
@@ -64,28 +66,45 @@ rule bowtie_build:
     # consider runnig this as a shadow rule
     version: 1.0
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
-    output: "04_MAPPING/{sample}-contigs"
+    output: "%s/{sample}-contigs" % MAPPING_DIR
     shell: "bowtie-build {input} {output}" 
 
 rule bowtie:
     """ Run mapping with bowtie2,  sort and convert to bam with samtools"""
     version: 1.0
-    input: rules.bowtie_build.output
-    output: {sample}.bam
+    input:
+        build_output = rules.bowtie_build.output,
+        r1 = rules.megahit.input.r1,
+        r2 = rules.megahit.input.r2,
+    output: temp("%s/{sample}.sam" % MAPPING_DIR)
     params: 
-        threads = {cluster.n},
-        r1 = rules.megahit.input.r1
-        r2 = rules.megahit.input.r2
-        sam = "{sample}.sam"
-        raw_bam = "{sample}-RAW.bam"
+        threads = "{cluster.n}",
         dir = "04_MAPPING/{sample}"
-    shadow: "shallow" # By making this rule a shadow rule, we don't need to cleanup the sam file and the raw.bam file.
-    shell:
-    """
-    bowtie2 --threads {params.threads} -x {input} -1 {params.r1} -2 {params.r2} --no-unal -S {params.dir}/{params.sam}
-    samtools view -F 4 -bS {params.dir}/{params.sam} > {params.dir}/{params.raw_bam}
-    """
+    shell: "bowtie2 --threads {params.threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output}"
 
 rule samtools_view:
-    """ sort sam file with samtools"""
+    """ sort sam file with samtools and create a RAW.bam file"""
+    version: 1.0
+    input: rules.bowtie.output
+    output: temp("%s/{sample}-RAW.bam" % MAPPING_DIR)
+    shell: "samtools view -F 4 -bS {input} > {output}"
+
+rule anvi_init_bam:
+    """ run anvi-init-bam on RAW bam file to create a bam file ready for anvi-profile"""
+    version: 1.0 # later we can decide if we want the version to use the version of anvi'o
+    input: rules.samtools_view.output
+    output: "%s/{sample}.bam" % MAPPING_DIR
+    shell: "anvi-init-bam {input} -o {output}"
+
+rule anvi_profile:
+    """ run anvi-profile on the bam file"""
+    version: 1.0
+    input:
+        bam = rules.anvi_init_bam.output,
+        contigs = rules.gen_contigs_db.output
+    output: "%s/{sample}" % PROFILE_DIR
+    params:
+        MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
+        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"]
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} --cluster-contigs"
 
