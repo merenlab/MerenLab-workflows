@@ -3,6 +3,7 @@ import os
 import anvio
 import anvio.utils as u
 
+
 __author__ = "Alon Shaiber"
 __copyright__ = "Copyright 2017, The anvio Project"
 __credits__ = []
@@ -31,10 +32,13 @@ rule megahit:
     input:
         r1="01_QC/{sample}-QUALITY_PASSED_R1.fastq.gz", 
         r2="01_QC/{sample}-QUALITY_PASSED_R2.fastq.gz"
-    threads: 11
-    params: dir="02_ASSEMBLY/{sample}_TEMP"
+    params:
+        dir="02_ASSEMBLY/{sample}_TEMP",
+        MIN_CONTIG_LENGTH_FOR_ASSEMBLY = config["MIN_CONTIG_LENGTH_FOR_ASSEMBLY"],
+        memory_portion_usage_for_assembly = config["memory_portion_usage_for_assembly"]
     output: temp("02_ASSEMBLY/{sample}_TEMP")
-    shell: "megahit -1 {input.r1} -2 {input.r2} --min-contig-len 1000 -m 0.4 -o {params.dir} -t {threads} "
+    threads: 11
+    shell: "megahit -1 {input.r1} -2 {input.r2} --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY} -m {params.memory_portion_usage_for_assembly} -o {params.dir} -t {threads} "
 
 rule reformat_fasta:
     version: 1.0
@@ -59,7 +63,17 @@ rule gen_contigs_db:
     version: 1.0
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     output: "03_CONTIGS/{sample}-contigs.db"
-    shell: "anvi-gen-contigs-database -f {input} -o {output}"
+    params: MIN_CONTIG_SIZE_FOR_CONTIGS_DB = config["MIN_CONTIG_SIZE_FOR_CONTIGS_DB"]
+    threads: 5
+    shell: "anvi-gen-contigs-database -f {input} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_CONTIGS_DB}"
+
+rule anvi_run_hmms:
+    """ Run anvi-run-hmms"""
+    version: 1.0
+    input: rules.gen_contigs_db.output
+    output: touch("anvi_run_hmms-{sample}.done")
+    threads: 20
+    shell: "anvi-run-hmms -c {input} -T {threads}"
 
 rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
@@ -67,6 +81,7 @@ rule bowtie_build:
     version: 1.0
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     output: "%s/{sample}-contigs" % MAPPING_DIR
+    threads: 4
     shell: "bowtie-build {input} {output}" 
 
 rule bowtie:
@@ -77,16 +92,16 @@ rule bowtie:
         r1 = rules.megahit.input.r1,
         r2 = rules.megahit.input.r2,
     output: temp("%s/{sample}.sam" % MAPPING_DIR)
-    params: 
-        threads = "{cluster.n}",
-        dir = "04_MAPPING/{sample}"
-    shell: "bowtie2 --threads {params.threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output}"
+    params: dir = "04_MAPPING/{sample}"
+    threads: 10
+    shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output}"
 
 rule samtools_view:
     """ sort sam file with samtools and create a RAW.bam file"""
     version: 1.0
     input: rules.bowtie.output
     output: temp("%s/{sample}-RAW.bam" % MAPPING_DIR)
+    threads: 4
     shell: "samtools view -F 4 -bS {input} > {output}"
 
 rule anvi_init_bam:
@@ -94,6 +109,7 @@ rule anvi_init_bam:
     version: 1.0 # later we can decide if we want the version to use the version of anvi'o
     input: rules.samtools_view.output
     output: "%s/{sample}.bam" % MAPPING_DIR
+    threads: 4
     shell: "anvi-init-bam {input} -o {output}"
 
 rule anvi_profile:
@@ -101,10 +117,12 @@ rule anvi_profile:
     version: 1.0
     input:
         bam = rules.anvi_init_bam.output,
-        contigs = rules.gen_contigs_db.output
+        contigs = rules.gen_contigs_db.output,
+        hmms = rules.anvi_run_hmms.output # this is here just so snakemake would run the hmms
     output: "%s/{sample}" % PROFILE_DIR
     params:
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
-        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"]
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} --cluster-contigs"
+        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"],
+    threads: 5
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -T {threads} --cluster-contigs"
 
