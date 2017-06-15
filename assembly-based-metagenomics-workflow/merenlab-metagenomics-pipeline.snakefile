@@ -63,9 +63,8 @@ rule gen_contigs_db:
     version: 1.0
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     output: "03_CONTIGS/{sample}-contigs.db"
-    params: MIN_CONTIG_SIZE_FOR_CONTIGS_DB = config["MIN_CONTIG_SIZE_FOR_CONTIGS_DB"]
     threads: 5
-    shell: "anvi-gen-contigs-database -f {input} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_CONTIGS_DB}"
+    shell: "anvi-gen-contigs-database -f {input} -o {output}"
 
 rule anvi_run_hmms:
     """ Run anvi-run-hmms"""
