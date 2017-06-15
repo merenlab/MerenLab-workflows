@@ -1,6 +1,9 @@
 {
     "samples_txt": "samples.txt",
     "remove_human_contamination": "no",
-    "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "",
+    "memory_portion_usage_for_assembly": "0.4",
+    "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",
+    "MIN_CONTIG_SIZE_FOR_CONTIGS_DB": "2500",
+    "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
     "CLUSTER_CONTIGS": "--cluster-contigs"
 }
