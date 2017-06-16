@@ -12,8 +12,14 @@ __version__ = anvio.__version__
 __maintainer__ = "Alon Shaiber"
 __email__ = "alon.shaiber@gmail.com"
 
+LOGS_DIR = "00_LOGS"
+QC_DIR = "01_QC"
+ASSEMBLY_DIR = "02_ASSEMBLY"
+CONTIGS_DIR = "03_CONTIGS"
+MAPPING_DIR = "04_MAPPING"
+PROFILE_DIR = "05_ANVIO_PROFILE"
+os.makedirs(LOGS_DIR, exist_ok=True)
 
-os.makedirs('00_LOGS', exist_ok=True)
 configfile: "config.json"
 
 # loading the samples.txt file 
@@ -21,11 +27,6 @@ samples_txt_file = config["samples_txt"]
 fastq_files = u.get_TAB_delimited_file_as_dictionary(samples_txt_file)
 SAMPLES = set(fastq_files.keys())
 
-QC_DIR = "01_QC"
-ASSEMBLY_DIR = "02_ASSEMBLY"
-CONTIGS_DIR = "03_CONTIGS"
-MAPPING_DIR = "04_MAPPING"
-PROFILE_DIR = "05_ANVIO_PROFILE"
 
 rule all:
     input: expand("{DIR}/{sample}", DIR=PROFILE_DIR, sample=SAMPLES)
