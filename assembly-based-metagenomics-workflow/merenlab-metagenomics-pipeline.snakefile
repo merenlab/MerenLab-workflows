@@ -21,6 +21,9 @@ samples_txt_file = config["samples_txt"]
 fastq_files = u.get_TAB_delimited_file_as_dictionary(samples_txt_file)
 SAMPLES = set(fastq_files.keys())
 
+QC_DIR = "01_QC"
+ASSEMBLY_DIR = "02_ASSEMBLY"
+CONTIGS_DIR = "03_CONTIGS"
 MAPPING_DIR = "04_MAPPING"
 PROFILE_DIR = "05_ANVIO_PROFILE"
 
@@ -30,23 +33,23 @@ rule all:
 rule megahit:
     version: 1.0
     input:
-        r1="01_QC/{sample}-QUALITY_PASSED_R1.fastq.gz", 
-        r2="01_QC/{sample}-QUALITY_PASSED_R2.fastq.gz"
+        r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz", 
+        r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     params:
-        dir="02_ASSEMBLY/{sample}_TEMP",
+        dir = ASSEMBLY_DIR + "/{sample}_TEMP",
         MIN_CONTIG_LENGTH_FOR_ASSEMBLY = config["MIN_CONTIG_LENGTH_FOR_ASSEMBLY"],
         memory_portion_usage_for_assembly = config["memory_portion_usage_for_assembly"]
-    output: temp("02_ASSEMBLY/{sample}_TEMP")
+    output: temp(ASSEMBLY_DIR + "/{sample}_TEMP")
     threads: 11
     shell: "megahit -1 {input.r1} -2 {input.r2} --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY} -m {params.memory_portion_usage_for_assembly} -o {params.dir} -t {threads} "
 
 rule reformat_fasta:
     version: 1.0
     input:
-        "02_ASSEMBLY/{sample}_TEMP"
+        ASSEMBLY_DIR + "/{sample}_TEMP"
     output:
-        contig=protected("02_ASSEMBLY/{sample}/{sample}-contigs.fa"),
-        report="02_ASSEMBLY/{sample}/{sample}-reformat-report.txt"
+        contig = protected(ASSEMBLY_DIR + "/{sample}/{sample}-contigs.fa"),
+        report = ASSEMBLY_DIR + "/{sample}/{sample}-reformat-report.txt"
     shell: "anvi-script-reformat-fasta {input}/final.contigs.fa -o {output.contig} -r {output.report} --simplify-names --prefix {wildcards.sample}"
 
 if config["remove_human_contamination"] == "yes":
@@ -54,15 +57,15 @@ if config["remove_human_contamination"] == "yes":
     rule remove_human_dna_using_centrifuge:
         """ this is just a placeholder for now """
         version: 1.0
-        input: "02_ASSEMBLY/{sample}/{sample}-contigs.fa"
-        output: "02_ASSEMBLY/{sample}/{sample}-contigs-filtered.fa"
+        input: ASSEMBLY_DIR + "/{sample}/{sample}-contigs.fa"
+        output: ASSEMBLY_DIR + "/{sample}/{sample}-contigs-filtered.fa"
         shell: "touch {output}"
 
 rule gen_contigs_db:
     """ Generates a contigs database using anvi-gen-contigs-database """
     version: 1.0
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
-    output: "03_CONTIGS/{sample}-contigs.db"
+    output: CONTIGS_DIR + "/{sample}-contigs.db"
     threads: 5
     shell: "anvi-gen-contigs-database -f {input} -o {output}"
 
@@ -91,7 +94,7 @@ rule bowtie:
         r1 = rules.megahit.input.r1,
         r2 = rules.megahit.input.r2,
     output: temp("%s/{sample}/{sample}.sam" % MAPPING_DIR)
-    params: dir = "04_MAPPING/{sample}"
+    params: dir = MAPPING_DIR + "/{sample}"
     threads: 10
     shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output}"
 
