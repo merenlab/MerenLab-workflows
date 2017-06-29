@@ -53,7 +53,7 @@ rule qc:
         r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz", 
         r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     threads: 4
-    shell: "iu-filter-quality-minoche {input}"
+    shell: "iu-filter-quality-minoche {input} --ignore-deflines"
 
 rule megahit:
     version: 1.0
