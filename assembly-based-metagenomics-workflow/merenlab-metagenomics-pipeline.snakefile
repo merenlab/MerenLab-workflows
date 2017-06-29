@@ -31,6 +31,22 @@ SAMPLES = set(fastq_files.keys())
 rule all:
     input: expand("{DIR}/{sample}", DIR=PROFILE_DIR, sample=SAMPLES)
 
+rule gen_configs:
+    version: 1.0
+    input: samples_txt_file
+    output: expand("{DIR}/{sample}.ini", DIR = QC_DIR, sample = SAMPLES)
+    params: dir=QC_DIR
+    shell: "iu-gen-configs {input} -o {params.dir}"
+
+rule qc:
+    version: 1.0
+    input: QC_DIR + "/{sample}.ini"
+    output: 
+        r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz", 
+        r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
+    threads: 4
+    shell: "iiu-filter-quality-minoche {input}"
+
 rule megahit:
     version: 1.0
     input:

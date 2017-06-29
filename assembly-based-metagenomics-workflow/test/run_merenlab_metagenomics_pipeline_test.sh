@@ -14,13 +14,13 @@ cd $output_dir
 
 INFO "create samples.txt"
 echo -e "sample\tr1\tr2" > samples.txt
-echo -e "S01\tS01-QUALITY_PASSED_R1.fastq.gz\tS01-QUALITY_PASSED_R2.fastq.gz" >> samples.txt
-echo -e "S02\tS02-QUALITY_PASSED_R1.fastq.gz\tS02-QUALITY_PASSED_R2.fastq.gz" >> samples.txt
+echo -e "S01\tS01_R1.fastq.gz\tS01_R2.fastq.gz" >> samples.txt
+echo -e "S02\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
 
 INFO "create empty fastq files"
 mkdir 01_QC
-touch 01_QC/S01-QUALITY_PASSED_R1.fastq.gz 01_QC/S01-QUALITY_PASSED_R2.fastq.gz
-touch 01_QC/S02-QUALITY_PASSED_R1.fastq.gz 01_QC/S02-QUALITY_PASSED_R2.fastq.gz
+touch 01_QC/S01_R1.fastq.gz 01_QC/S01_R2.fastq.gz
+touch 01_QC/S02_R1.fastq.gz 01_QC/S02_R2.fastq.gz
 
 INFO "Call snakefile"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --cluster-config cluster.json --cluster 'clusterize -n {threads} -log {cluster.log}' --jobs 4 --latency-wait 100 -np 
