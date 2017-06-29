@@ -50,10 +50,16 @@ rule qc:
     version: 1.0
     input: QC_DIR + "/{sample}.ini"
     output: 
-        r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz", 
-        r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
+        r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq", 
+        r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq"
     threads: 4
     shell: "iu-filter-quality-minoche {input} --ignore-deflines"
+
+rule gzip_fastas:
+    version: 1.0
+    input: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq"
+    output: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
+    shell: "gzip {input}"
 
 rule megahit:
     version: 1.0
