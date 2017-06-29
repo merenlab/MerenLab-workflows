@@ -1,9 +1,39 @@
 '''
-This is a snakemake workflow for metagenomics.
+    This is a snakemake for the metagenomics workflow in the Meren Lab using
+    anvi'o.
 
-An example run of this workflow:
+    It includes the following steps:
+    Quality filtering
+    Assembly using megahit
+    Mapping of metagenomes to assemblies using bowtie2
+    generating anvio contigs database (including running hmm profile)
+    generating anvio profile database
 
-snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --cluster-config cluster.json --cluster 'clusterize -n {threads} -log {cluster.log}' --jobs 4 --latency-wait 100 -p 
+    The following files must exist in the working directory:
+    config.json - this file contains essential configuration information for
+    the pipeline. Here is an example of the format of the file:
+
+    {
+        "samples_txt": "samples.txt",
+        "remove_human_contamination": "no",
+        "memory_portion_usage_for_assembly": "0.4",
+        "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",
+        "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
+        "CLUSTER_CONTIGS": "--cluster-contigs"
+    }
+
+    samples.txt - 
+        TAB-delimited file to describe where samples are. The
+        header line should be "sample", "r1", and "r2". Each
+        row should list the sample name in the first column,
+        and full path for r1 and r2.
+
+
+
+    An example run of this workflow on the barhal server:
+    $ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \ 
+                --cluster-config cluster.json --cluster 'clusterize  \
+                -n {threads} -log {cluster.log}' --jobs 4 --latency-wait 100 -p 
 
 '''
 #If it doesn't already exist then create a 00_LOGS folder
@@ -20,6 +50,7 @@ __version__ = anvio.__version__
 __maintainer__ = "Alon Shaiber"
 __email__ = "alon.shaiber@gmail.com"
 
+# Setting the names of all directories
 LOGS_DIR = "00_LOGS"
 QC_DIR = "01_QC"
 ASSEMBLY_DIR = "02_ASSEMBLY"
@@ -28,25 +59,39 @@ MAPPING_DIR = "04_MAPPING"
 PROFILE_DIR = "05_ANVIO_PROFILE"
 os.makedirs(LOGS_DIR, exist_ok=True)
 
+# The config file contains many essential configurations for the workflow
 configfile: "config.json"
 
-# loading the samples.txt file 
+# loading the samples.txt file
 samples_txt_file = config["samples_txt"]
+
+# getting the names of samples from samples.txt
 fastq_files = u.get_TAB_delimited_file_as_dictionary(samples_txt_file)
 SAMPLES = set(fastq_files.keys())
 
 
 rule all:
+    '''
+        The final product of the workflow is an anvi'o profile directory
+        for each sample
+    '''
     input: expand("{DIR}/{sample}", DIR=PROFILE_DIR, sample=SAMPLES)
 
+
 rule gen_configs:
+    '''
+        Generating a config file for each sample. Notice that this step
+        is ran only once and generates the config files for all samples
+    '''
     version: 1.0
     input: samples_txt_file
     output: expand("{DIR}/{sample}.ini", DIR = QC_DIR, sample = SAMPLES)
     params: dir=QC_DIR
     shell: "iu-gen-configs {input} -o {params.dir}"
 
+
 rule qc:
+    ''' Run QC using iu-filter-quality-minoche '''
     version: 1.0
     input: QC_DIR + "/{sample}.ini"
     output: 
@@ -55,24 +100,36 @@ rule qc:
     threads: 4
     shell: "iu-filter-quality-minoche {input} --ignore-deflines"
 
+
 rule gzip_fastas:
+    ''' Compressing the quality controlled fastq files'''
     version: 1.0
     input: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq"
     output: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
     shell: "gzip {input}"
 
 rule megahit:
+    ''' 
+        Assembling fastq files using megahit.
+        Notice that megahit requires a directory to be specified as 
+        output. If the directory already exists then megahit will not
+        run. To avoid this, the output for this rule is defined as the 
+        directory (and not the assembly fasta file), because if the 
+        fasta file was defined as the output of the rule, then snakemake
+        would automaticaly creates the directory (for example see
+        https://groups.google.com/d/msg/snakemake/KorE6c-OZg4/JbSLG1aaAwcJ
+        to understand the behavior of snakemake).
+    '''
     version: 1.0
     input:
         r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz", 
         r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     params:
-        dir = ASSEMBLY_DIR + "/{sample}_TEMP",
         MIN_CONTIG_LENGTH_FOR_ASSEMBLY = config["MIN_CONTIG_LENGTH_FOR_ASSEMBLY"],
         memory_portion_usage_for_assembly = config["memory_portion_usage_for_assembly"]
     output: temp(ASSEMBLY_DIR + "/{sample}_TEMP")
     threads: 11
-    shell: "megahit -1 {input.r1} -2 {input.r2} --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY} -m {params.memory_portion_usage_for_assembly} -o {params.dir} -t {threads} "
+    shell: "megahit -1 {input.r1} -2 {input.r2} --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY} -m {params.memory_portion_usage_for_assembly} -o {output} -t {threads} "
 
 rule reformat_fasta:
     version: 1.0
@@ -151,7 +208,7 @@ rule anvi_profile:
     input:
         bam = rules.anvi_init_bam.output,
         contigs = rules.gen_contigs_db.output,
-        hmms = rules.anvi_run_hmms.output # this is here just so snakemake would run the hmms
+        hmms = rules.anvi_run_hmms.output # this is here just so snakemake would run the hmms before running this rule
     output: "%s/{sample}" % PROFILE_DIR
     params:
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
