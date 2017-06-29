@@ -1,3 +1,11 @@
+'''
+This is a snakemake workflow for metagenomics.
+
+An example run of this workflow:
+
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --cluster-config cluster.json --cluster 'clusterize -n {threads} -log {cluster.log}' --jobs 4 --latency-wait 100 -p 
+
+'''
 #If it doesn't already exist then create a 00_LOGS folder
 import os
 import anvio
@@ -45,7 +53,7 @@ rule qc:
         r1= QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz", 
         r2= QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     threads: 4
-    shell: "iiu-filter-quality-minoche {input}"
+    shell: "iu-filter-quality-minoche {input}"
 
 rule megahit:
     version: 1.0
