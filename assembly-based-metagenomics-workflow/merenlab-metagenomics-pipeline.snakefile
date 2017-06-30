@@ -173,7 +173,8 @@ if config["remove_human_contamination"] == "yes":
 
 rule gen_contigs_db:
     """ Generates a contigs database using anvi-gen-contigs-database """
-    version: 1.0
+    # Setting the version to the same as that of the contigs__version in anvi'o
+    version: anvio.__contigs__version__
     # depending on whether human contamination using centrifuge was done
     # or not, the input to this rule will be the raw assembly or the 
     # filtered.
@@ -282,7 +283,8 @@ rule anvi_init_bam:
 
 rule anvi_profile:
     """ run anvi-profile on the bam file"""
-    version: 1.0
+    # setting the rule version to be as the version of the profile database of anvi'o
+    version: anvio.__profile__version__
     input:
         bam = rules.anvi_init_bam.output.bam,
         contigs = rules.gen_contigs_db.output,
