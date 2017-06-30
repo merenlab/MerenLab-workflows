@@ -198,7 +198,8 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         output:
             hits = CONTIGS_DIR + "/{sample}-centrifuge_hits.tsv",
             report = CONTIGS_DIR + "/{sample}-centrifuge_report.tsv"
-        shell: "centrifuge -f -x $CENTRIFUGE_BASE/p+h+v/p+h+v {input} -S {output}"
+        params: db=config['centrifuge']['db']
+        shell: "centrifuge -f -x {params.db} {input} -S {output}"
 
 
     rule import_taxonomy:
