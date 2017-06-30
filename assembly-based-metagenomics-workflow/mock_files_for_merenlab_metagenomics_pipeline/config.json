@@ -5,5 +5,6 @@
     "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",
     "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
     "CLUSTER_CONTIGS": "--cluster-contigs",
+    "run_qc": "yes",
     "assign_taxonomy_with_centrifuge": "yes"
 }
