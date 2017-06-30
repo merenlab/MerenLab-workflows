@@ -94,7 +94,7 @@ if config["run_qc"] == "yes":
     # if the user wants to run qc then create the ini files.
     # this is not a rule because it needs to run only once, and creates
     # the files for all samples.
-    print(samples_txt_file)
+    os.makedirs(QC_DIR, exist_ok=True)
     shell("iu-gen-configs {input} -o {dir}".format(input=samples_txt_file, dir=QC_DIR))
 
 rule qc:
