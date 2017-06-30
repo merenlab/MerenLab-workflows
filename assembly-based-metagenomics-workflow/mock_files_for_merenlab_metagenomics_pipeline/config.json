@@ -4,5 +4,6 @@
     "memory_portion_usage_for_assembly": "0.4",
     "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",
     "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
-    "CLUSTER_CONTIGS": "--cluster-contigs"
+    "CLUSTER_CONTIGS": "--cluster-contigs",
+    "assign_taxonomy_with_centrifuge": "yes"
 }

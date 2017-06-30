@@ -38,7 +38,15 @@
     Note on rule order: whenever the order of rule execution was ambiguous
         mypreferred approach was to use the rule dependencies. See:
         http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#rule-dependencies
-    '''
+
+    Note on cluster configuration: because multiple rules require the 
+    number of threads as input (for example anvi-profil, megahit), and I
+    couldn't find a way to make the number of threads from the
+    cluster.config file available within rules, then instead I define the 
+    number of threads within each rule. I'm aware it's less elegant than
+    having all cluster configuration in the cluster.json file, and would
+    love to learn about an alternative solution if you have one.
+'''
 import os
 import anvio
 import anvio.utils as u
@@ -174,13 +182,56 @@ rule gen_contigs_db:
     threads: 5
     shell: "anvi-gen-contigs-database -f {input} -o {output}"
 
+
+if config["assign_taxonomy_with_centrifuge"] == "yes":
+    # If the user wants taxonomy to be assigned with centrifuge
+    # then these following rules would run.
+    rule export_gene_calls:
+        ''' Export gene calls and use for centrifuge'''
+        version: 1.0
+        input: rules.gen_contigs_db.output
+        # output is temporary. No need to keep this file.
+        output: temp(CONTIGS_DIR + "/{sample}-gene-calls.fa")
+        shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output}"
+
+
+    rule run_centrifuge:
+        ''' Run centrifuge on the exported gene calls of the contigs.db'''
+        version: 1.0
+        input: rules.export_gene_calls.output
+        output:
+            hits = CONTIGS_DIR + "/{sample}-centrifuge_hits.tsv",
+            report = CONTIGS_DIR + "/{sample}-centrifuge_report.tsv"
+        shell: "centrifuge -f -x $CENTRIFUGE_BASE/p+h+v/p+h+v {input} -S {output}"
+
+
+    rule import_taxonomy:
+        ''' Run anvi-import-taxonomy '''
+        version: 1.0
+        input:
+            hits = rules.run_centrifuge.output.hits,
+            report = rules.run_centrifuge.output.report,
+            contigs = rules.gen_contigs_db.output
+        # using a flag file because no file is created by this rule.
+        # for more information see:
+        # http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#flag-files
+        output: touch(CONTIGS_DIR + "{sample}-anvi_import_taxonomy.done")
+        params: parser = "centrifuge"
+        shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser}"
+
+
 rule anvi_run_hmms:
     """ Run anvi-run-hmms"""
+    # TODO: add rule for running hmms for ribosomal genes and import
+    # their new gene calls. 
     version: 1.0
-    input: rules.gen_contigs_db.output
-    # Since this rule doesn't create a new file, then snakemake will
-    # touch this file at the end to show that this rule executed.
-    output: touch("anvi_run_hmms-{sample}.done")
+    # if the user requested to run taxonomy using centrifuge, then this
+    # will be ran only after centrifuge finished. Otherwise, this rule
+    # will run after anvi-gen-contigs-database
+    input: rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.gen_contigs_db.output
+    # using a snakemake flag file as an output since no file is generated
+    # by the rule.
+    output: touch(CONTIGS_DIR + "anvi_run_hmms-{sample}.done")
     threads: 20
     shell: "anvi-run-hmms -c {input} -T {threads}"
 
