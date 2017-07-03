@@ -216,7 +216,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         # using a flag file because no file is created by this rule.
         # for more information see:
         # http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#flag-files
-        output: touch(CONTIGS_DIR + "{sample}-anvi_import_taxonomy.done")
+        output: touch(CONTIGS_DIR + "/{sample}-anvi_import_taxonomy.done")
         params: parser = "centrifuge"
         shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser}"
 
@@ -232,7 +232,7 @@ rule anvi_run_hmms:
     input: rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.gen_contigs_db.output
     # using a snakemake flag file as an output since no file is generated
     # by the rule.
-    output: touch(CONTIGS_DIR + "anvi_run_hmms-{sample}.done")
+    output: touch(CONTIGS_DIR + "/anvi_run_hmms-{sample}.done")
     # using the params to set the path to the contigs
     # because I used the input file to determine the order of rules
     params: contigs=rules.gen_contigs_db.output
