@@ -90,12 +90,16 @@ rule all:
     input: expand("{DIR}/{sample}", DIR=PROFILE_DIR, sample=SAMPLES)
 
 
-if config["run_qc"] == "yes":
-    # if the user wants to run qc then create the ini files.
-    # this is not a rule because it needs to run only once, and creates
-    # the files for all samples.
-    os.makedirs(QC_DIR, exist_ok=True)
-    shell("iu-gen-configs {input} -o {dir}".format(input=samples_txt_file, dir=QC_DIR))
+rule gen_configs:
+    '''
+        Generating a config file for each sample. Notice that this step
+        is ran only once and generates the config files for all samples
+    '''
+    version: 1.0
+    input: samples_txt_file
+    output: expand("{DIR}/{sample}.ini", DIR = QC_DIR, sample = SAMPLES)
+    params: dir=QC_DIR
+    shell: "iu-gen-configs {input} -o {params.dir}"
 
 rule qc:
     ''' Run QC using iu-filter-quality-minoche '''
