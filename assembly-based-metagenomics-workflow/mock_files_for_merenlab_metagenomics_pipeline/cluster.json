@@ -2,5 +2,9 @@
     "__default__" :
     {
         "log" : "00_LOGS/{wildcards.sample}-{rule}.log"
+    },
+    "gen_configs":
+    {
+        "log" : "00_LOGS/{rule}.log"
     }
 }
