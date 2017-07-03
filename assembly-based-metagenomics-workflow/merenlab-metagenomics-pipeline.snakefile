@@ -203,7 +203,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
             hits = CONTIGS_DIR + "/{sample}-centrifuge_hits.tsv",
             report = CONTIGS_DIR + "/{sample}-centrifuge_report.tsv"
         params: db=config['centrifuge']['db']
-        shell: "centrifuge -f -x {params.db} {input} -S {output}"
+        shell: "centrifuge -f -x {params.db} {input} -S {output.hits}"
 
 
     rule import_taxonomy:
