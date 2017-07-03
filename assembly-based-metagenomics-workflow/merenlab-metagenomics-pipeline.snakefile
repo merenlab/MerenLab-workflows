@@ -233,8 +233,11 @@ rule anvi_run_hmms:
     # using a snakemake flag file as an output since no file is generated
     # by the rule.
     output: touch(CONTIGS_DIR + "anvi_run_hmms-{sample}.done")
+    # using the params to set the path to the contigs
+    # because I used the input file to determine the order of rules
+    params: contigs=rules.gen_contigs_db.output
     threads: 20
-    shell: "anvi-run-hmms -c {input} -T {threads}"
+    shell: "anvi-run-hmms -c {params.contigs} -T {threads}"
 
 rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
