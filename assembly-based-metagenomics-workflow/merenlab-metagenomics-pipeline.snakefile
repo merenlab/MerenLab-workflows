@@ -229,15 +229,12 @@ rule anvi_run_hmms:
     # if the user requested to run taxonomy using centrifuge, then this
     # will be ran only after centrifuge finished. Otherwise, this rule
     # will run after anvi-gen-contigs-database
-    input: rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.gen_contigs_db.output
+    input: rules.gen_contigs_db.output
     # using a snakemake flag file as an output since no file is generated
     # by the rule.
     output: touch(CONTIGS_DIR + "/anvi_run_hmms-{sample}.done")
-    # using the params to set the path to the contigs
-    # because I used the input file to determine the order of rules
-    params: contigs=rules.gen_contigs_db.output
     threads: 20
-    shell: "anvi-run-hmms -c {params.contigs} -T {threads}"
+    shell: "anvi-run-hmms -c {input} -T {threads}"
 
 rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
@@ -291,6 +288,8 @@ rule anvi_profile:
     input:
         bam = rules.anvi_init_bam.output.bam,
         contigs = rules.gen_contigs_db.output,
+        # this is here just so snakemake would run the taxonomy before running this rule
+        taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.gen_contigs_db.output,
         # this is here just so snakemake would run the hmms before running this rule
         hmms = rules.anvi_run_hmms.output 
     output: "%s/{sample}" % PROFILE_DIR
