@@ -297,7 +297,7 @@ rule anvi_profile:
         # minimal length of contig to include in the profiling
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
         # see --cluster-contigs in the help manu of anvi-profile
-        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"],
+        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"]
     threads: 5
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -T {threads} --cluster-contigs"
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -T {threads} {params.CLUSTER_CONTIGS}"
 
