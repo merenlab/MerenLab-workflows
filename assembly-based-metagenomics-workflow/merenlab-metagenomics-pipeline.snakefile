@@ -87,7 +87,7 @@ rule all:
         The final product of the workflow is an anvi'o profile directory
         for each sample
     '''
-    input: expand("{DIR}/{sample}", DIR=PROFILE_DIR, sample=SAMPLES)
+    input: expand("{DIR}/{sample}/PROFILE.db", DIR=PROFILE_DIR, sample=SAMPLES)
 
 
 rule gen_configs:
@@ -292,12 +292,13 @@ rule anvi_profile:
         taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.gen_contigs_db.output,
         # this is here just so snakemake would run the hmms before running this rule
         hmms = rules.anvi_run_hmms.output 
-    output: "%s/{sample}" % PROFILE_DIR
+    output: "%s/{sample}/PROFILE.db" % PROFILE_DIR
     params:
         # minimal length of contig to include in the profiling
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
         # see --cluster-contigs in the help manu of anvi-profile
-        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"]
+        CLUSTER_CONTIGS = config["CLUSTER_CONTIGS"],
+        profile_dir_output = "%s/{sample}" % PROFILE_DIR
     threads: 5
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -T {threads} {params.CLUSTER_CONTIGS}"
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.profile_dir_output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -T {threads} --overwrite-output-destinations {params.CLUSTER_CONTIGS}"
 
