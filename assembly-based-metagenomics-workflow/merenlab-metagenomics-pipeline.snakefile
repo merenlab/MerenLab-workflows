@@ -82,7 +82,6 @@ samples_txt_file = config["samples_txt"]
 # getting the samples information (names, [group], path to r1, path to r2) from samples.txt
 samples_information = pd.read_csv(samples_txt_file, sep='\t', index_col=False)
 # get a list of the sample names
-print(samples_information)
 sample_names = list(samples_information['sample'])
 
 # Collecting information regarding groups.
@@ -126,7 +125,6 @@ rule gen_configs:
     shell: "iu-gen-configs {input} -o {params.dir}"
 
 
-print(QC_DIR)
 rule qc:
     ''' Run QC using iu-filter-quality-minoche '''
     version: 1.0
@@ -160,7 +158,6 @@ def input_for_megahit(wildcards):
     r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
 
     r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
-    print({'r1': r1, 'r2': r2})
     return {'r1': r1, 'r2': r2}
 
 
