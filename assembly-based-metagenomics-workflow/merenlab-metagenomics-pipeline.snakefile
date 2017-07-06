@@ -190,7 +190,17 @@ rule megahit:
     # the files that were created stay there.
     output: temp(ASSEMBLY_DIR + "/{group}_TEMP")
     threads: 11
-    shell: "megahit -1 {input.r1} -2 {input.r2} --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY} -m {params.memory_portion_usage_for_assembly} -o {output} -t {threads} "
+    run:
+        r1 = ','.join(snakemake.input.r1)
+        r2 = ','.join(snakemake.input.r2)
+        
+        cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
+            " --min-contig-len {snakemake.params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY}" + \
+            " -m {params.memory_portion_usage_for_assembly}" + \
+            " -o {output}" + \
+            " -t {threads} "
+        print(cmd)
+        shell(cmd)
 
 
 rule reformat_fasta:
