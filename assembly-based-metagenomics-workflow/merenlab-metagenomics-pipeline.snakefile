@@ -33,7 +33,7 @@
     An example run of this workflow on the barhal server:
     $ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \ 
                 --cluster-config cluster.json --cluster 'clusterize  \
-                -n {threads} -log {cluster.log}' --jobs 4 --latency-wait 100 -p 
+                -n {threads} -log {log}' --jobs 4 --latency-wait 100 -p 
 
     Note on rule order: whenever the order of rule execution was ambiguous
         mypreferred approach was to use the rule dependencies. See:
@@ -108,6 +108,7 @@ rule all:
 
 rule gen_input_for_iu_gen_configs:
     ''' Generates the input file for the rule gen_configs'''
+    log: LOGS_DIR + "/gen_input_for_iu_gen_configs.log"
     output: QC_DIR + "/path-to-raw-fastq-files.txt"
     run:
         samples_information.to_csv(output, sep='\t', columns=['sample','r1','r2'],index=False)
@@ -119,6 +120,7 @@ rule gen_configs:
         is ran only once and generates the config files for all samples
     '''
     version: 1.0
+    log: LOGS_DIR + "/gen_configs.log"
     input: rules.gen_input_for_iu_gen_configs.output
     output: expand("{DIR}/{sample}.ini", DIR=QC_DIR, sample=sample_names)
     params: dir=QC_DIR
@@ -128,6 +130,7 @@ rule gen_configs:
 rule qc:
     ''' Run QC using iu-filter-quality-minoche '''
     version: 1.0
+    log: LOGS_DIR + "/{sample}-qc.log"
     input: QC_DIR + "/{sample}.ini"
     output: 
         r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq",
@@ -139,6 +142,7 @@ rule qc:
 rule gzip_fastas:
     ''' Compressing the quality controlled fastq files'''
     version: 1.0
+    log: LOGS_DIR + "/{sample}-{R}-gzip.log"
     input: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq"
     output: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
     shell: "gzip {input}"
@@ -174,6 +178,7 @@ rule megahit:
         and only the fasta file is kept for later analysis.
     '''
     version: 1.0
+    log: LOGS_DIR + "/{group}-megahit.log"
     input: unpack(input_for_megahit)
     params:
         # the minimum length for contig (smaller contigs will be discarded)
@@ -197,6 +202,7 @@ rule reformat_fasta:
         > MYSAMPLE01_000000000002
     '''
     version: 1.0
+    log: LOGS_DIR + "/{group}-reformat_fasta.log"
     input:
         ASSEMBLY_DIR + "/{group}_TEMP"
     output:
@@ -210,6 +216,7 @@ if config["remove_human_contamination"] == "yes":
     rule remove_human_dna_using_centrifuge:
         """ this is just a placeholder for now """
         version: 1.0
+        log: LOGS_DIR + "/{group}-remove-human-dna-using-centrifuge.log"
         input: ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"
         output: ASSEMBLY_DIR + "/{group}/{group}-contigs-filtered.fa"
         shell: "touch {output}"
@@ -219,6 +226,7 @@ rule gen_contigs_db:
     """ Generates a contigs database using anvi-gen-contigs-database """
     # Setting the version to the same as that of the contigs__version in anvi'o
     version: anvio.__contigs__version__
+    log: LOGS_DIR + "/{group}-gen_contigs_db.log"
     # depending on whether human contamination using centrifuge was done
     # or not, the input to this rule will be the raw assembly or the 
     # filtered.
@@ -234,6 +242,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
     rule export_gene_calls:
         ''' Export gene calls and use for centrifuge'''
         version: 1.0
+        log: LOGS_DIR + "/{group}-export_gene_calls.log"
         input: rules.gen_contigs_db.output
         # output is temporary. No need to keep this file.
         output: temp(CONTIGS_DIR + "/{group}-gene-calls.fa")
@@ -243,6 +252,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
     rule run_centrifuge:
         ''' Run centrifuge on the exported gene calls of the contigs.db'''
         version: 1.0
+        log: LOGS_DIR + "/{group}-run_centrifuge.log"
         input: rules.export_gene_calls.output
         output:
             hits = CONTIGS_DIR + "/{group}-centrifuge_hits.tsv",
@@ -254,6 +264,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
     rule import_taxonomy:
         ''' Run anvi-import-taxonomy '''
         version: 1.0
+        log: LOGS_DIR + "/{group}-import_taxonomy.log"
         input:
             hits = rules.run_centrifuge.output.hits,
             report = rules.run_centrifuge.output.report,
@@ -271,6 +282,7 @@ rule anvi_run_hmms:
     # TODO: add rule for running hmms for ribosomal genes and import
     # their new gene calls. 
     version: 1.0
+    log: LOGS_DIR + "/{group}-anvi_run_hmms.log"
     # if the user requested to run taxonomy using centrifuge, then this
     # will be ran only after centrifuge finished. Otherwise, this rule
     # will run after anvi-gen-contigs-database
@@ -286,6 +298,7 @@ rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
     # TODO: consider runnig this as a shadow rule
     version: 1.0
+    log: LOGS_DIR + "/{group}-bowtie_build.log"
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     # I touch this file because the files created have different suffix
     output: touch("%s/{group}/{group}-contigs" % MAPPING_DIR) 
@@ -296,6 +309,7 @@ rule bowtie_build:
 rule bowtie:
     """ Run mapping with bowtie2,  sort and convert to bam with samtools"""
     version: 1.0
+    log: LOGS_DIR + "/{group}-{sample}-bowtie.log"
     input:
         build_output = lambda wildcards: expand(MAPPING_DIR + "/{group}/{group}-contigs", group=list(samples_information[samples_information["sample"] == wildcards.sample]["group"])),
         r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
@@ -310,6 +324,7 @@ rule bowtie:
 rule samtools_view:
     """ sort sam file with samtools and create a RAW.bam file"""
     version: 1.0
+    log: LOGS_DIR + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
     # output as temp. we only keep the final bam file
     output: temp("%s/{group}/{sample}-RAW.bam" % MAPPING_DIR)
@@ -323,6 +338,7 @@ rule anvi_init_bam:
         anvi-profile.
     """
     version: 1.0 # later we can decide if we want the version to use the version of anvi'o
+    log: LOGS_DIR + "/{group}-{sample}-anvi_init_bam.log"
     input: rules.samtools_view.output
     output:
         bam = "%s/{group}/{sample}.bam" % MAPPING_DIR,
@@ -335,6 +351,7 @@ rule anvi_profile:
     """ run anvi-profile on the bam file"""
     # setting the rule version to be as the version of the profile database of anvi'o
     version: anvio.__profile__version__
+    log: LOGS_DIR + "/{group}-{sample}-anvi_profile.log"
     input:
         bam = "%s/{group}/{sample}.bam" % MAPPING_DIR,
         # TODO: add option to profile all to all (all samples to all contigs)
@@ -365,6 +382,7 @@ rule anvi_merge:
         anvi-interactive.
     '''
     version: anvio.__profile__version__
+    log: LOGS_DIR + "/{group}-anvi_merge.log"
     # The input are all profile databases that belong to the same group
     input:
         profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group) # list(samples_information[samples_information["group"] == wildcards.group]["sample"])) 
