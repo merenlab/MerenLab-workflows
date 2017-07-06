@@ -20,7 +20,7 @@ echo -e "S03\tG02\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
 
 
 INFO "Call snakefile"
-snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --cluster-config cluster.json --cluster 'clusterize -n {threads} -log {cluster.log}' --jobs 4 --latency-wait 100 -np 
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --cluster 'clusterize -n {threads} -log {log}' --jobs 4 --latency-wait 100 -np 
 
 INFO "clear all files"
 rm *.snakefile config.json cluster.json samples.txt
