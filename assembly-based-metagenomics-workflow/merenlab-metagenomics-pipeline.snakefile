@@ -72,6 +72,7 @@ MERGE_DIR = "06_MERGED"
 
 #If it doesn't already exist then create a 00_LOGS folder
 os.makedirs(LOGS_DIR, exist_ok=True)
+os.makedirs(QC_DIR, exist_ok=True)
 
 # The config file contains many essential configurations for the workflow
 configfile: "config.json"
