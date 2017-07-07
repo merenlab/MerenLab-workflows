@@ -400,6 +400,7 @@ rule anvi_merge:
     log: LOGS_DIR + "/{group}-anvi_merge.log"
     # The input are all profile databases that belong to the same group
     input:
+        contigs = rules.gen_contigs_db.output,
         profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group) # list(samples_information[samples_information["group"] == wildcards.group]["sample"])) 
     output: MERGE_DIR + "/{group}/PROFILE.db"
     threads: 5
@@ -411,8 +412,8 @@ rule anvi_merge:
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
         if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
-            shell("ln -S {input} &> {log}")
+            shell("ln -S {input.profiles} &> {log}")
         else:
             profiles_string = ','.join(input.profiles)
-            shell("anvi-merge -i %s -o {params.output_dir} -S {params.name} -T {threads} --overwrite-output-destinations &> {log}" % profiles)
+            shell("anvi-merge -i %s -o {params.output_dir} -c {input.contigs} -S {params.name} -T {threads} --overwrite-output-destinations &> {log}" % profiles_string)
 
