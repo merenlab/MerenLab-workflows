@@ -258,7 +258,8 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         ''' Export gene calls and use for centrifuge'''
         version: 1.0
         log: LOGS_DIR + "/{group}-export_gene_calls.log"
-        input: rules.gen_contigs_db.output
+        # marking the input as ancient in order to ignore timestamps.
+        input: ancient(rules.gen_contigs_db.output)
         # output is temporary. No need to keep this file.
         output: temp(CONTIGS_DIR + "/{group}-gene-calls.fa")
         shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &> {log}"
@@ -283,7 +284,8 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         input:
             hits = rules.run_centrifuge.output.hits,
             report = rules.run_centrifuge.output.report,
-            contigs = rules.gen_contigs_db.output
+            # marking the contigs.db as ancient in order to ignore timestamps.
+            contigs = ancient(rules.gen_contigs_db.output)
         # using a flag file because no file is created by this rule.
         # for more information see:
         # http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#flag-files
@@ -301,7 +303,8 @@ rule anvi_run_hmms:
     # if the user requested to run taxonomy using centrifuge, then this
     # will be ran only after centrifuge finished. Otherwise, this rule
     # will run after anvi-gen-contigs-database
-    input: rules.gen_contigs_db.output
+    # marking the input as ancient in order to ignore timestamps.
+    input: ancient(rules.gen_contigs_db.output)
     # using a snakemake flag file as an output since no file is generated
     # by the rule.
     output: touch(CONTIGS_DIR + "/anvi_run_hmms-{group}.done")
@@ -370,7 +373,8 @@ rule anvi_profile:
     input:
         bam = "%s/{group}/{sample}.bam" % MAPPING_DIR,
         # TODO: add option to profile all to all (all samples to all contigs)
-        contigs = lambda wildcards: CONTIGS_DIR + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0],
+        # marking the contigs.db as ancient in order to ignore timestamps.
+        contigs = ancient(lambda wildcards: CONTIGS_DIR + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
         # this is here just so snakemake would run the taxonomy before running this rule
         taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.anvi_init_bam.output,
         # this is here just so snakemake would run the hmms before running this rule
@@ -400,7 +404,8 @@ rule anvi_merge:
     log: LOGS_DIR + "/{group}-anvi_merge.log"
     # The input are all profile databases that belong to the same group
     input:
-        contigs = rules.gen_contigs_db.output,
+        # marking the contigs.db as ancient in order to ignore timestamps.
+        contigs = ancient(rules.gen_contigs_db.output),
         profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group) # list(samples_information[samples_information["group"] == wildcards.group]["sample"])) 
     output: MERGE_DIR + "/{group}/PROFILE.db"
     threads: 5
