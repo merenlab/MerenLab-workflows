@@ -23,7 +23,7 @@ INFO "Call snakefile"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --cluster 'clusterize -n {threads} -log {log}' --jobs 4 --latency-wait 100 -np 
 
 INFO "clear all files"
-rm *.snakefile config.json cluster.json samples.txt
+rm *.snakefile config.json samples.txt
 rm -rf 00_LOGS 01_QC
 
 # go back to the directory where we started
