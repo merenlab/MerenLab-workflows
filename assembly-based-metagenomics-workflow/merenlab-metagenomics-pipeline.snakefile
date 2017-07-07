@@ -98,20 +98,18 @@ else:
     group_sizes = dict.fromkeys(groups,1)
     
 
+if not os.path.isfile(QC_DIR + "/path-to-raw-fastq-files.txt"):
+    # only create the file if it doesn't always exist.
+    # if we create the file every time, then it snakemake would run from the begininnig every time
+    samples_information.to_csv(QC_DIR + "/path-to-raw-fastq-files.txt", sep='\t', columns=['sample','r1','r2'],index=False)
+
+
 rule all:
     '''
         The final product of the workflow is an anvi'o merged profile directory
         for each group
     '''
     input: expand("{DIR}/{group}/PROFILE.db", DIR=MERGE_DIR, group=group_names)
-
-
-rule gen_input_for_iu_gen_configs:
-    ''' Generates the input file for the rule gen_configs'''
-    log: LOGS_DIR + "/gen_input_for_iu_gen_configs.log"
-    output: QC_DIR + "/path-to-raw-fastq-files.txt"
-    run:
-        samples_information.to_csv(output, sep='\t', columns=['sample','r1','r2'],index=False)
 
 
 rule gen_configs:
@@ -121,7 +119,7 @@ rule gen_configs:
     '''
     version: 1.0
     log: LOGS_DIR + "/gen_configs.log"
-    input: rules.gen_input_for_iu_gen_configs.output
+    input: QC_DIR + "/path-to-raw-fastq-files.txt"
     output: expand("{DIR}/{sample}.ini", DIR=QC_DIR, sample=sample_names)
     params: dir=QC_DIR
     shell: "iu-gen-configs {input} -o {params.dir}"
@@ -191,11 +189,11 @@ rule megahit:
     output: temp(ASSEMBLY_DIR + "/{group}_TEMP")
     threads: 11
     run:
-        r1 = ','.join(snakemake.input.r1)
-        r2 = ','.join(snakemake.input.r2)
+        r1 = ','.join(input.r1)
+        r2 = ','.join(input.r2)
         
         cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
-            " --min-contig-len {snakemake.params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY}" + \
+            " --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY}" + \
             " -m {params.memory_portion_usage_for_assembly}" + \
             " -o {output}" + \
             " -t {threads} "
@@ -404,10 +402,10 @@ rule anvi_merge:
     run:
         # using run instead of shell so we can choose the appropriate shell command.
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
-        if group_sizes[snakemake.wildcards.group] == 1:
+        if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
             shell("ln -S {input}")
         else:
-            profiles_string = ','.join(snakemake.input.profiles)
+            profiles_string = ','.join(input.profiles)
             shell("anvi-merge -i %s -o {params.output_dir} -S {params.name} -T {threads} --overwrite-output-destinations" % profiles)
 
