@@ -413,7 +413,7 @@ rule anvi_merge:
     output:
         profile = MERGE_DIR + "/{group}/PROFILE.db",
         aux = MERGE_DIR + "/{group}/AUXILIARY-DATA.h5"
-    threads: 5
+    threads: 1
     params:
         output_dir = MERGE_DIR + "/{group}",
         name = "{group}",
