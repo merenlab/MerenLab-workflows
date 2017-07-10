@@ -409,7 +409,7 @@ rule anvi_merge:
     input:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(rules.gen_contigs_db.output),
-        profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group) # list(samples_information[samples_information["group"] == wildcards.group]["sample"])) 
+        profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group)
     output:
         profile = MERGE_DIR + "/{group}/PROFILE.db",
         aux = MERGE_DIR + "/{group}/AUXILIARY-DATA.h5"
