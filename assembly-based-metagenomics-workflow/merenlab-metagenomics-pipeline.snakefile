@@ -425,5 +425,5 @@ rule anvi_merge:
             # for individual assemblies, create a symlink to the profile database
             shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
         else:
-            shell("anvi-merge -i {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} -T {threads} --overwrite-output-destinations &>> {log}")
+            shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations &>> {log}")
 
