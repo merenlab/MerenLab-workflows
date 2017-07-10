@@ -380,7 +380,7 @@ rule anvi_profile:
         # this is here just so snakemake would run the hmms before running this rule
         hmms = rules.anvi_run_hmms.output 
     output:
-        profile = "%s/{group}/{sample}/PROFILE.db" % PROFILE_DIR
+        profile = "%s/{group}/{sample}/PROFILE.db" % PROFILE_DIR,
         aux = PROFILE_DIR + "/{group}/{sample}/AUXILIARY-DATA.h5"
     params:
         # minimal length of contig to include in the profiling
@@ -411,12 +411,12 @@ rule anvi_merge:
         contigs = ancient(rules.gen_contigs_db.output),
         profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group) # list(samples_information[samples_information["group"] == wildcards.group]["sample"])) 
     output:
-        profile = MERGE_DIR + "/{group}/PROFILE.db"
+        profile = MERGE_DIR + "/{group}/PROFILE.db",
         aux = MERGE_DIR + "/{group}/AUXILIARY-DATA.h5"
     threads: 5
     params:
         output_dir = MERGE_DIR + "/{group}",
-        name = "{group}"
+        name = "{group}",
         profile_dir = PROFILE_DIR + "/{group}/{sample}"
     run:
         # using run instead of shell so we can choose the appropriate shell command.
