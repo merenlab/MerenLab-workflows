@@ -153,16 +153,11 @@ rule gzip_fastas:
 
 
 def input_for_megahit(wildcards):
-#    l1 = list()
-#    l2 = list()
-#    print("here is my group %s" % wildcards.group)
-#    for sample in samples_information[samples_information["group"] == wildcards.group]["sample"]:
-#        l1.append(QC_DIR + "/%s-QUALITY_PASSED_R1.fastq.gz" % sample)
-#        l2.append(QC_DIR + "/%s-QUALITY_PASSED_R2.fastq.gz" % sample)
-#    r1 = '' + ','.join(l1) + ''
-#    r2 = '' + ','.join(l2) + ''
-#    print("list 2 %s" % r2)
-#    print("list 1 %s" % r1)
+    '''
+        Creating a dictionary containing the input files for megahit.
+        This could have also been done with a lambda expression, but for
+        easier readability it was done in a function.
+    '''
     r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
 
     r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
