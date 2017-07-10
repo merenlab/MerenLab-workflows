@@ -101,7 +101,7 @@ else:
     # If not groups were specified then each sample would be assembled 
     # separately
     group_names = list(sample_names)
-    group_sizes = dict.fromkeys(groups,1)
+    group_sizes = dict.fromkeys(group_names,1)
     
 
 if not os.path.isfile(QC_DIR + "/path-to-raw-fastq-files.txt"):
