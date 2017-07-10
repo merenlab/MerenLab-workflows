@@ -218,7 +218,7 @@ rule touch_megahit_output:
     output:
         contigs = temp(ASSEMBLY_DIR + "/{group}/final.contigs.fa")
     shell:
-        "mv {input.dir}/final.contigs.fa {input.contigs}"
+        "mv {input.dir}/final.contigs.fa {output.contigs}"
 
 
 
