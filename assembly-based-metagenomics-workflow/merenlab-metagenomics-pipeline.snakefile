@@ -379,7 +379,9 @@ rule anvi_profile:
         taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.anvi_init_bam.output,
         # this is here just so snakemake would run the hmms before running this rule
         hmms = rules.anvi_run_hmms.output 
-    output: "%s/{group}/{sample}/PROFILE.db" % PROFILE_DIR
+    output:
+        profile = "%s/{group}/{sample}/PROFILE.db" % PROFILE_DIR
+        aux = PROFILE_DIR + "/{group}/{sample}/AUXILIARY-DATA.h5"
     params:
         # minimal length of contig to include in the profiling
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
@@ -408,17 +410,20 @@ rule anvi_merge:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(rules.gen_contigs_db.output),
         profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group) # list(samples_information[samples_information["group"] == wildcards.group]["sample"])) 
-    output: MERGE_DIR + "/{group}/PROFILE.db"
+    output:
+        profile = MERGE_DIR + "/{group}/PROFILE.db"
+        aux = MERGE_DIR + "/{group}/AUXILIARY-DATA.h5"
     threads: 5
     params:
         output_dir = MERGE_DIR + "/{group}",
         name = "{group}"
+        profile_dir = PROFILE_DIR + "/{group}/{sample}"
     run:
         # using run instead of shell so we can choose the appropriate shell command.
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
         if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
-            shell("ln -s {input.profiles} -t {params.output_dir} &>> {log}")
+            shell("ln -s {params.profile_dir}/* -t {params.output_dir} &>> {log}")
         else:
             shell("anvi-merge -i {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} -T {threads} --overwrite-output-destinations &>> {log}")
 
