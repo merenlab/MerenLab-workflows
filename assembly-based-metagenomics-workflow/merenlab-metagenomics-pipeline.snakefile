@@ -48,7 +48,7 @@
     love to learn about an alternative solution if you have one.
 
     Note on log files: in order for the stdout and stderr to be written
-    into log files, I have added `&> {log}` to each shell command. if
+    into log files, I have added `&>> {log}` to each shell command. if
     running on a cluster, I suggested including something like this in
     your `--cluster` command: `--log {log}`.
 '''
@@ -128,7 +128,7 @@ rule gen_configs:
     input: QC_DIR + "/path-to-raw-fastq-files.txt"
     output: expand("{DIR}/{sample}.ini", DIR=QC_DIR, sample=sample_names)
     params: dir=QC_DIR
-    shell: "iu-gen-configs {input} -o {params.dir} &> {log}"
+    shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
 
 
 rule qc:
@@ -140,7 +140,7 @@ rule qc:
         r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq",
         r2 = QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq"
     threads: 4
-    shell: "iu-filter-quality-minoche {input} --ignore-deflines &> {log}"
+    shell: "iu-filter-quality-minoche {input} --ignore-deflines &>> {log}"
 
 
 rule gzip_fastas:
@@ -149,7 +149,7 @@ rule gzip_fastas:
     log: LOGS_DIR + "/{sample}-{R}-gzip.log"
     input: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq"
     output: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
-    shell: "gzip {input} &> {log}"
+    shell: "gzip {input} &>> {log}"
 
 
 def input_for_megahit(wildcards):
@@ -203,7 +203,7 @@ rule megahit:
             " -m {params.memory_portion_usage_for_assembly}" + \
             " -o {output}" + \
             " -t {threads}" + \
-            " &> {log}"
+            " &>> {log}"
         print(cmd)
         shell(cmd)
 
@@ -223,7 +223,7 @@ rule reformat_fasta:
     output:
         contig = protected(ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"),
         report = ASSEMBLY_DIR + "/{group}/{group}-reformat-report.txt"
-    shell: "anvi-script-reformat-fasta {input}/final.contigs.fa -o {output.contig} -r {output.report} --simplify-names --prefix {wildcards.group} &> {log}"
+    shell: "anvi-script-reformat-fasta {input}/final.contigs.fa -o {output.contig} -r {output.report} --simplify-names --prefix {wildcards.group} &>> {log}"
 
 
 if config["remove_human_contamination"] == "yes":
@@ -234,7 +234,7 @@ if config["remove_human_contamination"] == "yes":
         log: LOGS_DIR + "/{group}-remove-human-dna-using-centrifuge.log"
         input: ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"
         output: ASSEMBLY_DIR + "/{group}/{group}-contigs-filtered.fa"
-        shell: "touch {output} &> {log}"
+        shell: "touch {output} &>> {log}"
 
 
 rule gen_contigs_db:
@@ -248,7 +248,7 @@ rule gen_contigs_db:
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     output: CONTIGS_DIR + "/{group}-contigs.db"
     threads: 5
-    shell: "anvi-gen-contigs-database -f {input} -o {output} &> {log}"
+    shell: "anvi-gen-contigs-database -f {input} -o {output} &>> {log}"
 
 
 if config["assign_taxonomy_with_centrifuge"] == "yes":
@@ -262,7 +262,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         input: ancient(rules.gen_contigs_db.output)
         # output is temporary. No need to keep this file.
         output: temp(CONTIGS_DIR + "/{group}-gene-calls.fa")
-        shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &> {log}"
+        shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &>> {log}"
 
 
     rule run_centrifuge:
@@ -274,7 +274,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
             hits = CONTIGS_DIR + "/{group}-centrifuge_hits.tsv",
             report = CONTIGS_DIR + "/{group}-centrifuge_report.tsv"
         params: db=config['centrifuge']['db']
-        shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} &> {log}"
+        shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} &>> {log}"
 
 
     rule import_taxonomy:
@@ -291,7 +291,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         # http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#flag-files
         output: touch(CONTIGS_DIR + "/{group}-anvi_import_taxonomy.done")
         params: parser = "centrifuge"
-        shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &> {log}"
+        shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &>> {log}"
 
 
 rule anvi_run_hmms:
@@ -309,7 +309,7 @@ rule anvi_run_hmms:
     # by the rule.
     output: touch(CONTIGS_DIR + "/anvi_run_hmms-{group}.done")
     threads: 20
-    shell: "anvi-run-hmms -c {input} -T {threads} &> {log}"
+    shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
 
 
 rule bowtie_build:
@@ -321,7 +321,7 @@ rule bowtie_build:
     # I touch this file because the files created have different suffix
     output: touch("%s/{group}/{group}-contigs" % MAPPING_DIR) 
     threads: 4
-    shell: "bowtie2-build {input} {output} &> {log}"
+    shell: "bowtie2-build {input} {output} &>> {log}"
 
 
 rule bowtie:
@@ -336,7 +336,7 @@ rule bowtie:
     output: temp("%s/{group}/{sample}.sam" % MAPPING_DIR)
     params: dir = MAPPING_DIR + "/{sample}"
     threads: 10
-    shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &> {log}"
+    shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
 
 
 rule samtools_view:
@@ -347,7 +347,7 @@ rule samtools_view:
     # output as temp. we only keep the final bam file
     output: temp("%s/{group}/{sample}-RAW.bam" % MAPPING_DIR)
     threads: 4
-    shell: "samtools view -F 4 -bS {input} > {output} &> {log}"
+    shell: "samtools view -F 4 -bS {input} > {output} &>> {log}"
 
 
 rule anvi_init_bam:
@@ -362,7 +362,7 @@ rule anvi_init_bam:
         bam = "%s/{group}/{sample}.bam" % MAPPING_DIR,
         bai = "%s/{group}/{sample}.bam.bai" % MAPPING_DIR
     threads: 4
-    shell: "anvi-init-bam {input} -o {output.bam} &> {log}"
+    shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
 
 
 rule anvi_profile:
@@ -389,7 +389,7 @@ rule anvi_profile:
         name = "{sample}",
         profile_AA = "--profile-AA-frequencies" if config["profile_AA"] == "yes" else ""
     threads: 5
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &> {log}"
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {output} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
 
 rule anvi_merge:
     '''
@@ -417,8 +417,8 @@ rule anvi_merge:
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
         if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
-            shell("ln -s {input.profiles} -t {params.output_dir} &> {log}")
+            shell("ln -s {input.profiles} -t {params.output_dir} &>> {log}")
         else:
             profiles_string = ','.join(input.profiles)
-            shell("anvi-merge -i %s -o {params.output_dir} -c {input.contigs} -S {params.name} -T {threads} --overwrite-output-destinations &> {log}" % profiles_string)
+            shell("anvi-merge -i %s -o {params.output_dir} -c {input.contigs} -S {params.name} -T {threads} --overwrite-output-destinations &>> {log}" % profiles_string)
 
