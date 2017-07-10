@@ -424,6 +424,7 @@ rule anvi_merge:
         if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
             shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
+            shell("touch -h {params.profile_dir}/*/*")
         else:
             shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations &>> {log}")
 
