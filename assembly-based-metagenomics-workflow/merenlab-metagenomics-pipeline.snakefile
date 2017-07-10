@@ -213,11 +213,14 @@ rule reformat_fasta:
     version: 1.0
     log: LOGS_DIR + "/{group}-reformat_fasta.log"
     input:
-        ASSEMBLY_DIR + "/{group}_TEMP"
+        dir = ASSEMBLY_DIR + "/{group}_TEMP"
+        contigs = ASSEMBLY_DIR + "/{group}_TEMP/final.contigs.fa"
     output:
         contig = protected(ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"),
         report = ASSEMBLY_DIR + "/{group}/{group}-reformat-report.txt"
-    shell: "anvi-script-reformat-fasta {input}/final.contigs.fa -o {output.contig} -r {output.report} --simplify-names --prefix {wildcards.group} &>> {log}"
+    params: prefix = "{group}"
+    wrapper:
+        "wrappers/reformat-fasta"
 
 
 if config["remove_human_contamination"] == "yes":
