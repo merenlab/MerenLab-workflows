@@ -410,7 +410,7 @@ rule anvi_merge:
     output: MERGE_DIR + "/{group}/PROFILE.db"
     threads: 5
     params:
-        output_dir = MERGE_DIR + "{group}",
+        output_dir = MERGE_DIR + "/{group}",
         name = "{group}"
     run:
         # using run instead of shell so we can choose the appropriate shell command.
