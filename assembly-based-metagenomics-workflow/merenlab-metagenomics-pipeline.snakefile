@@ -159,7 +159,6 @@ def input_for_megahit(wildcards):
         easier readability it was done in a function.
     '''
     r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
-
     r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
     return {'r1': r1, 'r2': r2}
 
@@ -269,7 +268,8 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
             hits = CONTIGS_DIR + "/{group}-centrifuge_hits.tsv",
             report = CONTIGS_DIR + "/{group}-centrifuge_report.tsv"
         params: db=config['centrifuge']['db']
-        shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} &>> {log}"
+        threads: 5
+        shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} &>> {log}"
 
 
     rule import_taxonomy:
