@@ -202,6 +202,26 @@ rule megahit:
         shell(cmd)
 
 
+rule touch_megahit_output:
+    '''
+        Since the output of the megahit rule is a folder (see the comments
+        for the rule above), this rule is here to move the final assembly
+        fasta to the final assembly folder. This allows later rules to be
+        ignorant of the fact that the megahit rule output is a folder.
+        This way if in the future we will want to use a different assembler
+        that would work well with the snakemake way then we wouldnt have
+        to change downstream rules.
+    '''
+    log: LOGS_DIR + "/{group}-touch_megahit_output.log"
+    input:
+        dir = ASSEMBLY_DIR + "/{group}_TEMP"
+    output:
+        contigs = temp(ASSEMBLY_DIR + "/{group}/final.contigs.fa")
+    shell:
+        "mv {input.dir}/final.contigs.fa {input.contigs}"
+
+
+
 rule reformat_fasta:
     '''
         Reformating the headers of the contigs fasta files in order to
@@ -213,8 +233,7 @@ rule reformat_fasta:
     version: 1.0
     log: LOGS_DIR + "/{group}-reformat_fasta.log"
     input:
-        dir = ASSEMBLY_DIR + "/{group}_TEMP"
-        contigs = ASSEMBLY_DIR + "/{group}_TEMP/final.contigs.fa"
+        contigs = ASSEMBLY_DIR + "/{group}/final.contigs.fa"
     output:
         contig = protected(ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"),
         report = ASSEMBLY_DIR + "/{group}/{group}-reformat-report.txt"
