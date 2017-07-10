@@ -417,13 +417,13 @@ rule anvi_merge:
     params:
         output_dir = MERGE_DIR + "/{group}",
         name = "{group}",
-        profile_dir = PROFILE_DIR + "/{group}/{sample}"
+        profile_dir = PROFILE_DIR + "/{group}"
     run:
         # using run instead of shell so we can choose the appropriate shell command.
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
         if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
-            shell("ln -s {params.profile_dir}/* -t {params.output_dir} &>> {log}")
+            shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
         else:
             shell("anvi-merge -i {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} -T {threads} --overwrite-output-destinations &>> {log}")
 
