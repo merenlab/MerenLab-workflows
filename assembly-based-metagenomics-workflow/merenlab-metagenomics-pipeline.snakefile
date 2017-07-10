@@ -100,6 +100,7 @@ if "group" in samples_information.columns:
 else:
     # If not groups were specified then each sample would be assembled 
     # separately
+    samples_information['group'] = samples_information['sample']
     group_names = list(sample_names)
     group_sizes = dict.fromkeys(group_names,1)
     
