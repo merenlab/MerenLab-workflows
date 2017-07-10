@@ -387,7 +387,7 @@ rule anvi_profile:
         # see --cluster-contigs in the help manu of anvi-profile
         cluster_contigs = lambda wildcards: '--cluster-contigs' if group_sizes[wildcards.group] == 1 else '',
         name = "{sample}",
-        profile_AA = "--profile-AA-frequencies" if config["profile_AA"] == "yes" else ""
+        profile_AA = "--profile-AA-frequencies" if config["profile_AA"] == "yes" else "",
         output_dir = PROFILE_DIR + "/{group}/{sample}"
     threads: 5
     shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
