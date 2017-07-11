@@ -136,7 +136,13 @@ rule qc:
     ''' Run QC using iu-filter-quality-minoche '''
     version: 1.0
     log: LOGS_DIR + "/{sample}-qc.log"
-    input: QC_DIR + "/{sample}.ini"
+    # making the config file as "ancient" so QC wouldn't run just because
+    # a new config file was produced. I could have also made the input
+    # to the rule gen_configs as "ancient", but by doing this the way I did,
+    # I allow the user to add new samples to the samples.txt file and 
+    # run the snakefile, and this way snakemake would only run the newly
+    # added samples.
+    input: ancient(QC_DIR + "/{sample}.ini")
     output: 
         r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq",
         r2 = QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq"
