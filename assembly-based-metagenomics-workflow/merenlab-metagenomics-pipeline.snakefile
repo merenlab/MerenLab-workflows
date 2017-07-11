@@ -126,7 +126,7 @@ rule gen_configs:
     '''
     version: 1.0
     log: LOGS_DIR + "/gen_configs.log"
-    input: QC_DIR + "/path-to-raw-fastq-files.txt"
+    input: ancient(QC_DIR + "/path-to-raw-fastq-files.txt")
     output: expand("{DIR}/{sample}.ini", DIR=QC_DIR, sample=sample_names)
     params: dir=QC_DIR
     shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
@@ -137,11 +137,7 @@ rule qc:
     version: 1.0
     log: LOGS_DIR + "/{sample}-qc.log"
     # making the config file as "ancient" so QC wouldn't run just because
-    # a new config file was produced. I could have also made the input
-    # to the rule gen_configs as "ancient", but by doing this the way I did,
-    # I allow the user to add new samples to the samples.txt file and 
-    # run the snakefile, and this way snakemake would only run the newly
-    # added samples.
+    # a new config file was produced.
     input: ancient(QC_DIR + "/{sample}.ini")
     output: 
         r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq",
