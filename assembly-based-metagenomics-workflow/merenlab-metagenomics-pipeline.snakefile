@@ -126,6 +126,8 @@ rule gen_configs:
     '''
     version: 1.0
     log: LOGS_DIR + "/gen_configs.log"
+    # the input file is marked as 'ancient' so snakemake wouldn't run it
+    # just because a new path-to-raw-fastq-files.txt file was created.
     input: ancient(QC_DIR + "/path-to-raw-fastq-files.txt")
     output: expand("{DIR}/{sample}.ini", DIR=QC_DIR, sample=sample_names)
     params: dir=QC_DIR
