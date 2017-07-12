@@ -188,7 +188,7 @@ rule megahit:
         MIN_CONTIG_LENGTH_FOR_ASSEMBLY = config["MIN_CONTIG_LENGTH_FOR_ASSEMBLY"],
         # portion of total memory to use by megahit
         memory_portion_usage_for_assembly = config["memory_portion_usage_for_assembly"]
-    # output folder for megahit is temporary
+    # output folder for megahit is temporary (using the snakemake temp())
     # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
     # the files that were created stay there.
     output: temp(ASSEMBLY_DIR + "/{group}_TEMP")
@@ -240,6 +240,9 @@ rule reformat_fasta:
     input:
         contigs = ASSEMBLY_DIR + "/{group}/final.contigs.fa"
     output:
+        # write protecting the contig fasta file using protected() because
+        # runnig the assembly is probably the most time consuming step and
+        # we don't want anyone accidentaly deleting or changing this file.
         contig = protected(ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"),
         report = ASSEMBLY_DIR + "/{group}/{group}-reformat-report.txt"
     params: prefix = "{group}"
