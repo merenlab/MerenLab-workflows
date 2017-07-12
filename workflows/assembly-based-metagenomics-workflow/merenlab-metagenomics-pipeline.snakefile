@@ -92,8 +92,12 @@ os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
 
 
 # loading the samples.txt file
-samples_txt_file = config["samples_txt"]
-
+if "samples_txt" in config:
+    # Checking if user provided a name for the samples text file.
+    samples_txt_file = config["samples_txt"]
+else:
+    # The default samples file is samples.txt
+    samples_txt_file = "samples.txt"
 # getting the samples information (names, [group], path to r1, path to r2) from samples.txt
 samples_information = pd.read_csv(samples_txt_file, sep='\t', index_col=False)
 # get a list of the sample names
