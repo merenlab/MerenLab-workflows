@@ -1,5 +1,14 @@
 {
     "samples_txt": "samples.txt",
+    "output_dirs":{
+        "LOGS_DIR" : "00_LOGS",
+        "QC_DIR" : "01_QC",
+        "ASSEMBLY_DIR" : "02_ASSEMBLY",
+        "CONTIGS_DIR" : "03_CONTIGS",
+        "MAPPING_DIR" : "04_MAPPING",
+        "PROFILE_DIR" : "05_ANVIO_PROFILE",
+        "MERGE_DIR" : "06_MERGED"
+    },
     "remove_human_contamination": "no",
     "memory_portion_usage_for_assembly": "0.4",
     "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",

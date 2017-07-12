@@ -57,6 +57,7 @@ import anvio
 import pandas as pd
 import anvio.utils as u
 
+from anvio.errors import ConfigError
 
 __author__ = "Alon Shaiber"
 __copyright__ = "Copyright 2017, The anvio Project"
@@ -66,21 +67,29 @@ __version__ = anvio.__version__
 __maintainer__ = "Alon Shaiber"
 __email__ = "alon.shaiber@gmail.com"
 
-# Setting the names of all directories
-LOGS_DIR = "00_LOGS"
-QC_DIR = "01_QC"
-ASSEMBLY_DIR = "02_ASSEMBLY"
-CONTIGS_DIR = "03_CONTIGS"
-MAPPING_DIR = "04_MAPPING"
-PROFILE_DIR = "05_ANVIO_PROFILE"
-MERGE_DIR = "06_MERGED"
-
-#If it doesn't already exist then create a 00_LOGS folder
-os.makedirs(LOGS_DIR, exist_ok=True)
-os.makedirs(QC_DIR, exist_ok=True)
-
 # The config file contains many essential configurations for the workflow
 configfile: "config.json"
+
+# Setting the names of all directories
+dir_list = ["LOGS_DIR", "QC_DIR", "ASSEMBLY_DIR", "CONTIGS_DIR", "MAPPING_DIR", "PROFILE_DIR", "MERGE_DIR"]
+dir_names = ["00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"]
+dirs_dict = dict(zip(dir_list, dir_names))
+A = lambda x: dirs_dict[x] if x in dirs_dict else None
+if "output_dirs" in config:
+    for d in config["output_dirs"]:
+        # renaming folders according to the config file, if the user specified.
+        if d not in dir_list:
+            # making sure the user is asking to rename an existing folder.
+            raise ConfigError("You define a name for the directory %s in your \
+                               config file, but the only available folders are: \
+                               %s" % (d, dir_list))
+
+        dirs_dict[d] = A(d)
+
+#If it doesn't already exist then create a 00_LOGS folder
+os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
+os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
+
 
 # loading the samples.txt file
 samples_txt_file = config["samples_txt"]
@@ -105,10 +114,10 @@ else:
     group_sizes = dict.fromkeys(group_names,1)
     
 
-if not os.path.isfile(QC_DIR + "/path-to-raw-fastq-files.txt"):
+if not os.path.isfile(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"):
     # only create the file if it doesn't always exist.
     # if we create the file every time, then it snakemake would run from the begininnig every time
-    samples_information.to_csv(QC_DIR + "/path-to-raw-fastq-files.txt", sep='\t', columns=['sample','r1','r2'],index=False)
+    samples_information.to_csv(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt", sep='\t', columns=['sample','r1','r2'],index=False)
 
 
 rule all:
@@ -116,7 +125,7 @@ rule all:
         The final product of the workflow is an anvi'o merged profile directory
         for each group
     '''
-    input: expand("{DIR}/{group}/PROFILE.db", DIR=MERGE_DIR, group=group_names)
+    input: expand("{DIR}/{group}/PROFILE.db", DIR=dirs_dict["MERGE_DIR"], group=group_names)
 
 
 rule gen_configs:
@@ -125,25 +134,25 @@ rule gen_configs:
         is ran only once and generates the config files for all samples
     '''
     version: 1.0
-    log: LOGS_DIR + "/gen_configs.log"
+    log: dirs_dict["LOGS_DIR"] + "/gen_configs.log"
     # the input file is marked as 'ancient' so snakemake wouldn't run it
     # just because a new path-to-raw-fastq-files.txt file was created.
-    input: ancient(QC_DIR + "/path-to-raw-fastq-files.txt")
-    output: expand("{DIR}/{sample}.ini", DIR=QC_DIR, sample=sample_names)
-    params: dir=QC_DIR
+    input: ancient(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt")
+    output: expand("{DIR}/{sample}.ini", DIR=dirs_dict["QC_DIR"], sample=sample_names)
+    params: dir=dirs_dict["QC_DIR"]
     shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
 
 
 rule qc:
     ''' Run QC using iu-filter-quality-minoche '''
     version: 1.0
-    log: LOGS_DIR + "/{sample}-qc.log"
+    log: dirs_dict["LOGS_DIR"] + "/{sample}-qc.log"
     # making the config file as "ancient" so QC wouldn't run just because
     # a new config file was produced.
-    input: ancient(QC_DIR + "/{sample}.ini")
+    input: ancient(dirs_dict["QC_DIR"] + "/{sample}.ini")
     output: 
-        r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq",
-        r2 = QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq"
+        r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq",
+        r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq"
     threads: 4
     shell: "iu-filter-quality-minoche {input} --ignore-deflines &>> {log}"
 
@@ -151,9 +160,9 @@ rule qc:
 rule gzip_fastas:
     ''' Compressing the quality controlled fastq files'''
     version: 1.0
-    log: LOGS_DIR + "/{sample}-{R}-gzip.log"
-    input: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq"
-    output: QC_DIR + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
+    log: dirs_dict["LOGS_DIR"] + "/{sample}-{R}-gzip.log"
+    input: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq"
+    output: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
     shell: "gzip {input} &>> {log}"
 
 
@@ -163,8 +172,8 @@ def input_for_megahit(wildcards):
         This could have also been done with a lambda expression, but for
         easier readability it was done in a function.
     '''
-    r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
-    r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=QC_DIR, sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
+    r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
+    r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
     return {'r1': r1, 'r2': r2}
 
 
@@ -181,7 +190,7 @@ rule megahit:
         and only the fasta file is kept for later analysis.
     '''
     version: 1.0
-    log: LOGS_DIR + "/{group}-megahit.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-megahit.log"
     input: unpack(input_for_megahit)
     params:
         # the minimum length for contig (smaller contigs will be discarded)
@@ -191,7 +200,7 @@ rule megahit:
     # output folder for megahit is temporary (using the snakemake temp())
     # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
     # the files that were created stay there.
-    output: temp(ASSEMBLY_DIR + "/{group}_TEMP")
+    output: temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP")
     threads: 11
     run:
         r1 = ','.join(input.r1)
@@ -217,11 +226,11 @@ rule touch_megahit_output:
         that would work well with the snakemake way then we wouldnt have
         to change downstream rules.
     '''
-    log: LOGS_DIR + "/{group}-touch_megahit_output.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-touch_megahit_output.log"
     input:
-        dir = ASSEMBLY_DIR + "/{group}_TEMP"
+        dir = dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"
     output:
-        contigs = temp(ASSEMBLY_DIR + "/{group}/final.contigs.fa")
+        contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
     shell:
         "mv {input.dir}/final.contigs.fa {output.contigs}"
 
@@ -236,15 +245,15 @@ rule reformat_fasta:
         > MYSAMPLE01_000000000002
     '''
     version: 1.0
-    log: LOGS_DIR + "/{group}-reformat_fasta.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-reformat_fasta.log"
     input:
-        contigs = ASSEMBLY_DIR + "/{group}/final.contigs.fa"
+        contigs = dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa"
     output:
         # write protecting the contig fasta file using protected() because
         # runnig the assembly is probably the most time consuming step and
         # we don't want anyone accidentaly deleting or changing this file.
-        contig = protected(ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"),
-        report = ASSEMBLY_DIR + "/{group}/{group}-reformat-report.txt"
+        contig = protected(dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"),
+        report = dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-reformat-report.txt"
     params: prefix = "{group}"
     wrapper:
         # Notice that path to wrapper is relative to the workdir (if you
@@ -257,9 +266,9 @@ if config["remove_human_contamination"] == "yes":
     rule remove_human_dna_using_centrifuge:
         """ this is just a placeholder for now """
         version: 1.0
-        log: LOGS_DIR + "/{group}-remove-human-dna-using-centrifuge.log"
-        input: ASSEMBLY_DIR + "/{group}/{group}-contigs.fa"
-        output: ASSEMBLY_DIR + "/{group}/{group}-contigs-filtered.fa"
+        log: dirs_dict["LOGS_DIR"] + "/{group}-remove-human-dna-using-centrifuge.log"
+        input: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"
+        output: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs-filtered.fa"
         shell: "touch {output} &>> {log}"
 
 
@@ -267,12 +276,12 @@ rule gen_contigs_db:
     """ Generates a contigs database using anvi-gen-contigs-database """
     # Setting the version to the same as that of the contigs__version in anvi'o
     version: anvio.__contigs__version__
-    log: LOGS_DIR + "/{group}-gen_contigs_db.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-gen_contigs_db.log"
     # depending on whether human contamination using centrifuge was done
     # or not, the input to this rule will be the raw assembly or the 
     # filtered.
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
-    output: CONTIGS_DIR + "/{group}-contigs.db"
+    output: dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db"
     threads: 5
     shell: "anvi-gen-contigs-database -f {input} -o {output} &>> {log}"
 
@@ -283,22 +292,22 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
     rule export_gene_calls:
         ''' Export gene calls and use for centrifuge'''
         version: 1.0
-        log: LOGS_DIR + "/{group}-export_gene_calls.log"
+        log: dirs_dict["LOGS_DIR"] + "/{group}-export_gene_calls.log"
         # marking the input as ancient in order to ignore timestamps.
         input: ancient(rules.gen_contigs_db.output)
         # output is temporary. No need to keep this file.
-        output: temp(CONTIGS_DIR + "/{group}-gene-calls.fa")
+        output: temp(dirs_dict["CONTIGS_DIR"] + "/{group}-gene-calls.fa")
         shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &>> {log}"
 
 
     rule run_centrifuge:
         ''' Run centrifuge on the exported gene calls of the contigs.db'''
         version: 1.0
-        log: LOGS_DIR + "/{group}-run_centrifuge.log"
+        log: dirs_dict["LOGS_DIR"] + "/{group}-run_centrifuge.log"
         input: rules.export_gene_calls.output
         output:
-            hits = CONTIGS_DIR + "/{group}-centrifuge_hits.tsv",
-            report = CONTIGS_DIR + "/{group}-centrifuge_report.tsv"
+            hits = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_hits.tsv",
+            report = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_report.tsv"
         params: db=config['centrifuge']['db']
         threads: 5
         shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} &>> {log}"
@@ -307,7 +316,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
     rule import_taxonomy:
         ''' Run anvi-import-taxonomy '''
         version: 1.0
-        log: LOGS_DIR + "/{group}-import_taxonomy.log"
+        log: dirs_dict["LOGS_DIR"] + "/{group}-import_taxonomy.log"
         input:
             hits = rules.run_centrifuge.output.hits,
             report = rules.run_centrifuge.output.report,
@@ -316,7 +325,7 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         # using a flag file because no file is created by this rule.
         # for more information see:
         # http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#flag-files
-        output: touch(CONTIGS_DIR + "/{group}-anvi_import_taxonomy.done")
+        output: touch(dirs_dict["CONTIGS_DIR"] + "/{group}-anvi_import_taxonomy.done")
         params: parser = "centrifuge"
         shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &>> {log}"
 
@@ -326,7 +335,7 @@ rule anvi_run_hmms:
     # TODO: add rule for running hmms for ribosomal genes and import
     # their new gene calls. 
     version: 1.0
-    log: LOGS_DIR + "/{group}-anvi_run_hmms.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-anvi_run_hmms.log"
     # if the user requested to run taxonomy using centrifuge, then this
     # will be ran only after centrifuge finished. Otherwise, this rule
     # will run after anvi-gen-contigs-database
@@ -334,7 +343,7 @@ rule anvi_run_hmms:
     input: ancient(rules.gen_contigs_db.output)
     # using a snakemake flag file as an output since no file is generated
     # by the rule.
-    output: touch(CONTIGS_DIR + "/anvi_run_hmms-{group}.done")
+    output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
     threads: 20
     shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
 
@@ -343,10 +352,10 @@ rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
     # TODO: consider runnig this as a shadow rule
     version: 1.0
-    log: LOGS_DIR + "/{group}-bowtie_build.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-bowtie_build.log"
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     # I touch this file because the files created have different suffix
-    output: touch("%s/{group}/{group}-contigs" % MAPPING_DIR) 
+    output: touch("%s/{group}/{group}-contigs" % dirs_dict["MAPPING_DIR"]) 
     threads: 4
     shell: "bowtie2-build {input} {output} &>> {log}"
 
@@ -354,14 +363,14 @@ rule bowtie_build:
 rule bowtie:
     """ Run mapping with bowtie2,  sort and convert to bam with samtools"""
     version: 1.0
-    log: LOGS_DIR + "/{group}-{sample}-bowtie.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-bowtie.log"
     input:
-        build_output = lambda wildcards: expand(MAPPING_DIR + "/{group}/{group}-contigs", group=list(samples_information[samples_information["sample"] == wildcards.sample]["group"])),
-        r1 = QC_DIR + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
-        r2 = QC_DIR + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
+        build_output = lambda wildcards: expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs", group=list(samples_information[samples_information["sample"] == wildcards.sample]["group"])),
+        r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
+        r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     # setting the output as temp, since we only want to keep the bam file.
-    output: temp("%s/{group}/{sample}.sam" % MAPPING_DIR)
-    params: dir = MAPPING_DIR + "/{sample}"
+    output: temp("%s/{group}/{sample}.sam" % dirs_dict["MAPPING_DIR"])
+    params: dir = dirs_dict["MAPPING_DIR"] + "/{sample}"
     threads: 10
     shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
 
@@ -369,10 +378,10 @@ rule bowtie:
 rule samtools_view:
     """ sort sam file with samtools and create a RAW.bam file"""
     version: 1.0
-    log: LOGS_DIR + "/{group}-{sample}-samtools_view.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
     # output as temp. we only keep the final bam file
-    output: temp("%s/{group}/{sample}-RAW.bam" % MAPPING_DIR)
+    output: temp("%s/{group}/{sample}-RAW.bam" % dirs_dict["MAPPING_DIR"])
     threads: 4
     shell: "samtools view -F 4 -bS {input} > {output} &>> {log}"
 
@@ -383,11 +392,11 @@ rule anvi_init_bam:
         anvi-profile.
     """
     version: 1.0 # later we can decide if we want the version to use the version of anvi'o
-    log: LOGS_DIR + "/{group}-{sample}-anvi_init_bam.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_init_bam.log"
     input: rules.samtools_view.output
     output:
-        bam = "%s/{group}/{sample}.bam" % MAPPING_DIR,
-        bai = "%s/{group}/{sample}.bam.bai" % MAPPING_DIR
+        bam = "%s/{group}/{sample}.bam" % dirs_dict["MAPPING_DIR"],
+        bai = "%s/{group}/{sample}.bam.bai" % dirs_dict["MAPPING_DIR"]
     threads: 4
     shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
 
@@ -396,19 +405,19 @@ rule anvi_profile:
     """ run anvi-profile on the bam file"""
     # setting the rule version to be as the version of the profile database of anvi'o
     version: anvio.__profile__version__
-    log: LOGS_DIR + "/{group}-{sample}-anvi_profile.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_profile.log"
     input:
-        bam = "%s/{group}/{sample}.bam" % MAPPING_DIR,
+        bam = "%s/{group}/{sample}.bam" % dirs_dict["MAPPING_DIR"],
         # TODO: add option to profile all to all (all samples to all contigs)
         # marking the contigs.db as ancient in order to ignore timestamps.
-        contigs = ancient(lambda wildcards: CONTIGS_DIR + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
+        contigs = ancient(lambda wildcards: dirs_dict["CONTIGS_DIR"] + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
         # this is here just so snakemake would run the taxonomy before running this rule
         taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.anvi_init_bam.output,
         # this is here just so snakemake would run the hmms before running this rule
         hmms = rules.anvi_run_hmms.output 
     output:
-        profile = "%s/{group}/{sample}/PROFILE.db" % PROFILE_DIR,
-        aux = PROFILE_DIR + "/{group}/{sample}/AUXILIARY-DATA.h5"
+        profile = "%s/{group}/{sample}/PROFILE.db" % dirs_dict["PROFILE_DIR"],
+        aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5"
     params:
         # minimal length of contig to include in the profiling
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
@@ -417,7 +426,7 @@ rule anvi_profile:
         cluster_contigs = lambda wildcards: '--cluster-contigs' if group_sizes[wildcards.group] == 1 else '',
         name = "{sample}",
         profile_AA = "--profile-AA-frequencies" if config["profile_AA"] == "yes" else "",
-        output_dir = PROFILE_DIR + "/{group}/{sample}"
+        output_dir = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}"
     threads: 5
     shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
 
@@ -431,20 +440,20 @@ rule anvi_merge:
         anvi-interactive.
     '''
     version: anvio.__profile__version__
-    log: LOGS_DIR + "/{group}-anvi_merge.log"
+    log: dirs_dict["LOGS_DIR"] + "/{group}-anvi_merge.log"
     # The input are all profile databases that belong to the same group
     input:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(rules.gen_contigs_db.output),
-        profiles = lambda wildcards: expand(PROFILE_DIR + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group)
+        profiles = lambda wildcards: expand(dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group)
     output:
-        profile = MERGE_DIR + "/{group}/PROFILE.db",
-        aux = MERGE_DIR + "/{group}/AUXILIARY-DATA.h5"
+        profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
+        aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5"
     threads: 1
     params:
-        output_dir = MERGE_DIR + "/{group}",
+        output_dir = dirs_dict["MERGE_DIR"] + "/{group}",
         name = "{group}",
-        profile_dir = PROFILE_DIR + "/{group}"
+        profile_dir = dirs_dict["PROFILE_DIR"] + "/{group}"
     run:
         # using run instead of shell so we can choose the appropriate shell command.
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
