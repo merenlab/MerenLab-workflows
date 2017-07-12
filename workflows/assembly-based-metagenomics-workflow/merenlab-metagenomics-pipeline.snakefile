@@ -247,7 +247,9 @@ rule reformat_fasta:
         report = ASSEMBLY_DIR + "/{group}/{group}-reformat-report.txt"
     params: prefix = "{group}"
     wrapper:
-        "wrappers/reformat-fasta"
+        # Notice that path to wrapper is relative to the workdir (if you
+        # want an absolute path, use 'file://' instead of 'file:')
+        "file:wrappers/reformat-fasta"
 
 
 if config["remove_human_contamination"] == "yes":
