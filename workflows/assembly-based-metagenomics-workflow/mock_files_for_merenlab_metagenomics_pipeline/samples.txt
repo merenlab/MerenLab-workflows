@@ -1,0 +1,4 @@
+sample	group	r1	r2
+S01	G01	/path/to/01_R1.fastq.gz	/path/to/01_R2.fastq.gz
+S02	G02	/path/to/02_R1.fastq.gz	/path/to/02_R2.fastq.gz
+S03	G02	/path/to/03_R1.fastq.gz	/path/to/03_R2.fastq.gz
