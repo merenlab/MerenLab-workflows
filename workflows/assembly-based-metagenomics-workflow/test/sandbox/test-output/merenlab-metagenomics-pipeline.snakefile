@@ -86,6 +86,7 @@ if "output_dirs" in config:
 
         dirs_dict[d] = A(d,config["output_dirs"])
 
+
 #If it doesn't already exist then create a 00_LOGS folder
 os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
 os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
@@ -103,6 +104,16 @@ samples_information = pd.read_csv(samples_txt_file, sep='\t', index_col=False)
 # get a list of the sample names
 sample_names = list(samples_information['sample'])
 
+# if no groups are supplied then group names are sample names
+group_names = sample_names
+
+if 'references_txt' in config:
+    # if the user supplied a reference.txt file, then there is no need to
+    # create an assembly (see documentation for 'reference-mode')
+    references_txt_file = config["references_txt"]
+    references_information = pd.read_csv(references_txt_file, sep='\t', index_col=0).to_dict(orient='index')
+    group_names = list(references_information.keys())
+
 # Collecting information regarding groups.
 if "group" in samples_information.columns:
     # if groups were specified then members of a groups will be co-assembled.
@@ -111,12 +122,21 @@ if "group" in samples_information.columns:
     # the groups as values
     group_sizes = samples_information['group'].value_counts().to_dict()
 else:
-    # If not groups were specified then each sample would be assembled 
-    # separately
-    samples_information['group'] = samples_information['sample']
-    group_names = list(sample_names)
-    group_sizes = dict.fromkeys(group_names,1)
+    if 'references_txt' in config:
+        # if the user didn't provide a group column in the samples.txt,
+        # in reference mode the default is 'all_against_all'.
+        config['all_against_all'] = 'True'
+    else:
+        # if not groups were specified then each sample would be assembled 
+        # separately
+        samples_information['group'] = samples_information['sample']
+        group_names = list(sample_names)
+        group_sizes = dict.fromkeys(group_names,1)
     
+if config['all_against_all']:
+    # in all_against_all, the size of each group is as big as the number
+    # of samples.
+    group_sizes = dict.fromkeys(group_names,len(sample_names))
 
 if not os.path.isfile(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"):
     # only create the file if it doesn't always exist.
@@ -239,6 +259,17 @@ rule touch_megahit_output:
         "mv {input.dir}/final.contigs.fa {output.contigs}"
 
 
+def input_for_reformant_fasta(wildcards):
+    '''define the input for the rule reformat fasta.'''
+
+    if 'references_txt' in config:
+        # in 'reference mode' the input is the reference fasta
+        contig = references_information[wildcards.group]['path']
+    else:
+        contig = dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa"  
+
+    return contig
+
 
 rule reformat_fasta:
     '''
@@ -251,7 +282,7 @@ rule reformat_fasta:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-reformat_fasta.log"
     input:
-        contigs = dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa"
+        contigs = input_for_reformant_fasta
     output:
         # write protecting the contig fasta file using protected() because
         # runnig the assembly is probably the most time consuming step and
@@ -362,10 +393,10 @@ rule bowtie_build:
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     # I touch this file because the files created have different suffix
     output:
-        o1 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
-        o2 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
+        o1 = expand(dirs_dict["MAPPING_DIR"] + "%s/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
+        o2 = expand(dirs_dict["MAPPING_DIR"] + "%s/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
     params: 
-        prefix = dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs"
+        prefix = "%s/{group}/{group}-contigs" % dirs_dict["MAPPING_DIR"] 
     threads: 4
     shell: "bowtie2-build {input} {params.prefix} &>> {log}"
 
@@ -379,7 +410,7 @@ rule bowtie:
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     # setting the output as temp, since we only want to keep the bam file.
-    output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.sam")
+    output: temp("%s/{group}/{sample}.sam" % dirs_dict["MAPPING_DIR"])
     params: dir = dirs_dict["MAPPING_DIR"] + "/{sample}"
     threads: 10
     shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
@@ -391,7 +422,7 @@ rule samtools_view:
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
     # output as temp. we only keep the final bam file
-    output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
+    output: temp("%s/{group}/{sample}-RAW.bam" % dirs_dict["MAPPING_DIR"])
     threads: 4
     shell: "samtools view -F 4 -bS {input} > {output} &>> {log}"
 
@@ -405,8 +436,8 @@ rule anvi_init_bam:
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_init_bam.log"
     input: rules.samtools_view.output
     output:
-        bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
-        bai = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam.bai"
+        bam = "%s/{group}/{sample}.bam" % dirs_dict["MAPPING_DIR"],
+        bai = "%s/{group}/{sample}.bam.bai" % dirs_dict["MAPPING_DIR"]
     threads: 4
     shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
 
@@ -417,7 +448,7 @@ rule anvi_profile:
     version: anvio.__profile__version__
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_profile.log"
     input:
-        bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
+        bam = "%s/{group}/{sample}.bam" % dirs_dict["MAPPING_DIR"],
         # TODO: add option to profile all to all (all samples to all contigs)
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(lambda wildcards: dirs_dict["CONTIGS_DIR"] + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
