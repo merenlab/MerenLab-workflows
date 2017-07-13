@@ -14,7 +14,7 @@ The pipline includes the following steps:
 
 A directed acyclic graph (DAG) describing the workflow for a mock dataset could be seen below:
 
-![Alt text][mock_files_for_merenlab_metagenomics_pipeline/mock-dag.png?raw=true "mock-dag"]
+![Alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag.png?raw=true "mock-dag")
 
 
 If you want to create a DAG for your dataset, simply run:
@@ -89,6 +89,6 @@ For those of you who are learning `snakemake`, you might be surprised of how eas
 
 An updated DAG for the workflow for our mock data is available below:
 
-![alt text][mock_files_for_merenlab_metagenomics_pipeline/mock-dag-all-against-all.png]
+![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-all-against-all.png?raw=true "mock-dag-all-against-all")
 
 A little more of a mess! But also has a beauty to it :-).
