@@ -434,6 +434,29 @@ rule anvi_profile:
     threads: 5
     shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
 
+
+def input_for_anvi_merge(wildcards):
+    '''
+        Create dictionary as input for rule anvi_merge.
+        The reason we need a function as an input is to allow the user
+        to choose between an option of an "all against all" vs. "normal"
+        modes. See the documentation to learn more about the difference
+        between these modes.
+    '''
+
+    if A('all_against_all', config) == 'True':
+        # If the user specified 'all against all' in the configs file
+        # the end product would be a merge of all samples per group
+        profiles = expand(dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db", sample=list(samples_information['sample']), group=wildcards.group)
+
+    else:
+        # The default behaviour is to only merge (and hence map and profile)
+        # together samples that belong to the same group.
+        profiles = expand(dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group)
+
+    return profiles
+
+
 rule anvi_merge:
     '''
         If there are multiple profiles mapped to the same contigs database,
@@ -449,7 +472,7 @@ rule anvi_merge:
     input:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(rules.gen_contigs_db.output),
-        profiles = lambda wildcards: expand(dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db", sample=list(samples_information[samples_information['group'] == wildcards.group]['sample']), group=wildcards.group)
+        profiles = input_for_anvi_merge
     output:
         profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
         aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5"

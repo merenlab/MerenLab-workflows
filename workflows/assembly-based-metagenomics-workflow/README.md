@@ -71,3 +71,14 @@ To choose not to run these steps add these lines in your config file:
         "run": "False"
     }
 ```
+
+### The "all against all" option
+
+The default behaviour for this workflow is to create a contigs database for each _group_ and map (and profile, and merge) the samples that belong to that _group_. If you wish to map all samples to all contigs, use the `all_against_all` option in the config file:
+
+```
+    "all_against_all: "True"
+```
+
+For those of you who are learning `snakemake`, you might be surprised of how easy the switch between the modes is. All we need to do is tell the `anvi_merge` rule that we want all samples merged for each _group_, and snakemake immediatly infers that it needs to also run the extra mapping, and profiling steps. *Thank you snakemake!* (says everyone).
+
