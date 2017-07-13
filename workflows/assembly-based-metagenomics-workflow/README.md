@@ -18,7 +18,8 @@ A directed acyclic graph (DAG) describing the workflow for a mock dataset could 
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --dag | dot -Tsvg > dag.svg
 ```
 
-{: .notice}
+### Using `dot` on mac
+
 If you are on mac, you can use `dot` by installing `graphviz`, simply run `brew install graphviz`.
 
 ## Standard usage
