@@ -9,7 +9,7 @@
         "PROFILE_DIR" : "05_ANVIO_PROFILE",
         "MERGE_DIR" : "06_MERGED"
     },
-    "all_against_all": "True",
+    "all_against_all": "False",
     "remove_human_contamination": "no",
     "memory_portion_usage_for_assembly": "0.4",
     "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",

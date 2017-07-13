@@ -1,0 +1,4 @@
+sample	group	r1	r2
+S01	G01	S01_R1.fastq.gz	S01_R2.fastq.gz
+S02	G02	S02_R1.fastq.gz	S02_R2.fastq.gz
+S03	G02	S03_R1.fastq.gz	S03_R2.fastq.gz

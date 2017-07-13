@@ -86,6 +86,7 @@ if "output_dirs" in config:
 
         dirs_dict[d] = A(d,config["output_dirs"])
 
+
 #If it doesn't already exist then create a 00_LOGS folder
 os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
 os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
@@ -103,6 +104,16 @@ samples_information = pd.read_csv(samples_txt_file, sep='\t', index_col=False)
 # get a list of the sample names
 sample_names = list(samples_information['sample'])
 
+# if no groups are supplied then group names are sample names
+group_names = sample_names
+
+if 'references_txt' in config:
+    # if the user supplied a reference.txt file, then there is no need to
+    # create an assembly (see documentation for 'reference-mode')
+    references_txt_file = config["references_txt"]
+    references_information = pd.read_csv(references_txt_file, sep='\t', index_col=0).to_dict(orient='index')
+    group_names = list(references_information.keys())
+
 # Collecting information regarding groups.
 if "group" in samples_information.columns:
     # if groups were specified then members of a groups will be co-assembled.
@@ -110,13 +121,33 @@ if "group" in samples_information.columns:
     # creating a dictionary with groups as keys and number of samples in
     # the groups as values
     group_sizes = samples_information['group'].value_counts().to_dict()
+
+    if 'references_txt' in config:
+        # sanity check to see that groups specified in samples.txt match
+        # the names of references.
+        mismatch = set(group_names) - set(references_information.keys())
+        if mismatch:
+            raise ConfigError("Group names specified in the samples.txt \
+                               file must match the names of references \
+                               in the reference.txt file. These are the \
+                               mismatches: %s" % mismatch)
+
 else:
-    # If not groups were specified then each sample would be assembled 
-    # separately
-    samples_information['group'] = samples_information['sample']
-    group_names = list(sample_names)
-    group_sizes = dict.fromkeys(group_names,1)
+    if 'references_txt' in config:
+        # if the user didn't provide a group column in the samples.txt,
+        # in reference mode the default is 'all_against_all'.
+        config['all_against_all'] = 'True'
+    else:
+        # if not groups were specified then each sample would be assembled 
+        # separately
+        samples_information['group'] = samples_information['sample']
+        group_names = list(sample_names)
+        group_sizes = dict.fromkeys(group_names,1)
     
+if A('all_against_all', config) == 'True':
+    # in all_against_all, the size of each group is as big as the number
+    # of samples.
+    group_sizes = dict.fromkeys(group_names,len(sample_names))
 
 if not os.path.isfile(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"):
     # only create the file if it doesn't always exist.
@@ -239,6 +270,17 @@ rule touch_megahit_output:
         "mv {input.dir}/final.contigs.fa {output.contigs}"
 
 
+def input_for_reformant_fasta(wildcards):
+    '''define the input for the rule reformat fasta.'''
+
+    if 'references_txt' in config:
+        # in 'reference mode' the input is the reference fasta
+        contig = references_information[wildcards.group]['path']
+    else:
+        contig = dirs_dict["ASSEMBLY_DIR"] + "/%s/final.contigs.fa" % wildcards.group
+
+    return contig
+
 
 rule reformat_fasta:
     '''
@@ -251,7 +293,7 @@ rule reformat_fasta:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-reformat_fasta.log"
     input:
-        contigs = dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa"
+        contigs = input_for_reformant_fasta
     output:
         # write protecting the contig fasta file using protected() because
         # runnig the assembly is probably the most time consuming step and
@@ -422,7 +464,7 @@ rule anvi_profile:
         bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
         # TODO: add option to profile all to all (all samples to all contigs)
         # marking the contigs.db as ancient in order to ignore timestamps.
-        contigs = ancient(lambda wildcards: dirs_dict["CONTIGS_DIR"] + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
+        contigs = ancient(dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db")
     output:
         profile = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db",
         aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5",

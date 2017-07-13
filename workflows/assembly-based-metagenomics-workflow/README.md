@@ -92,3 +92,11 @@ An updated DAG for the workflow for our mock data is available below:
 ![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-all-against-all.png?raw=true "mock-dag-all-against-all")
 
 A little more of a mess! But also has a beauty to it :-).
+
+
+## Estimating occurence of population genomes in metagenomes
+
+Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
+In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using to `.txt` files: `samples.txt`, and `references.txt`. The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used. If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
+
+![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
