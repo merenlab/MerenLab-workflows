@@ -416,8 +416,9 @@ rule anvi_profile:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(lambda wildcards: dirs_dict["CONTIGS_DIR"] + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
     output:
-        profile = "%s/{group}/{sample}/PROFILE.db" % dirs_dict["PROFILE_DIR"],
-        aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5"
+        profile = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db",
+        aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5",
+        runlog = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/RUNLOG.txt"
     params:
         # minimal length of contig to include in the profiling
         MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
