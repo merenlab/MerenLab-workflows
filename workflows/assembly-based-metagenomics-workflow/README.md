@@ -14,7 +14,7 @@ The pipline includes the following steps:
 
 A directed acyclic graph (DAG) describing the workflow for a mock dataset could be seen below:
 
-![alt text][mock_files_for_merenlab_metagenomics_pipeline/mock-dag.png]
+![Alt text][mock_files_for_merenlab_metagenomics_pipeline/mock-dag.png?raw=true "mock-dag"]
 
 
 If you want to create a DAG for your dataset, simply run:
