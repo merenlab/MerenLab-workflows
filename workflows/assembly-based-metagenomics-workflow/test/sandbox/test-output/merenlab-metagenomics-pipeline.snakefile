@@ -121,6 +121,17 @@ if "group" in samples_information.columns:
     # creating a dictionary with groups as keys and number of samples in
     # the groups as values
     group_sizes = samples_information['group'].value_counts().to_dict()
+
+    if 'references_txt' in config:
+        # sanity check to see that groups specified in samples.txt match
+        # the names of references.
+        mismatch = set(group_names) - set(references_information.keys())
+        if mismatch:
+            raise ConfigError("Group names specified in the samples.txt \
+                               file must match the names of references \
+                               in the reference.txt file. These are the \
+                               mismatches: %s" % mismatch)
+
 else:
     if 'references_txt' in config:
         # if the user didn't provide a group column in the samples.txt,
@@ -266,7 +277,7 @@ def input_for_reformant_fasta(wildcards):
         # in 'reference mode' the input is the reference fasta
         contig = references_information[wildcards.group]['path']
     else:
-        contig = dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa"  
+        contig = dirs_dict["ASSEMBLY_DIR"] + "/%s/final.contigs.fa" % wildcards.group
 
     return contig
 
@@ -393,10 +404,10 @@ rule bowtie_build:
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     # I touch this file because the files created have different suffix
     output:
-        o1 = expand(dirs_dict["MAPPING_DIR"] + "%s/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
-        o2 = expand(dirs_dict["MAPPING_DIR"] + "%s/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
+        o1 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
+        o2 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
     params: 
-        prefix = "%s/{group}/{group}-contigs" % dirs_dict["MAPPING_DIR"] 
+        prefix = dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs"
     threads: 4
     shell: "bowtie2-build {input} {params.prefix} &>> {log}"
 
@@ -410,7 +421,7 @@ rule bowtie:
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     # setting the output as temp, since we only want to keep the bam file.
-    output: temp("%s/{group}/{sample}.sam" % dirs_dict["MAPPING_DIR"])
+    output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.sam")
     params: dir = dirs_dict["MAPPING_DIR"] + "/{sample}"
     threads: 10
     shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
@@ -422,7 +433,7 @@ rule samtools_view:
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
     # output as temp. we only keep the final bam file
-    output: temp("%s/{group}/{sample}-RAW.bam" % dirs_dict["MAPPING_DIR"])
+    output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: 4
     shell: "samtools view -F 4 -bS {input} > {output} &>> {log}"
 
@@ -436,8 +447,8 @@ rule anvi_init_bam:
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_init_bam.log"
     input: rules.samtools_view.output
     output:
-        bam = "%s/{group}/{sample}.bam" % dirs_dict["MAPPING_DIR"],
-        bai = "%s/{group}/{sample}.bam.bai" % dirs_dict["MAPPING_DIR"]
+        bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
+        bai = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam.bai"
     threads: 4
     shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
 
@@ -448,10 +459,10 @@ rule anvi_profile:
     version: anvio.__profile__version__
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_profile.log"
     input:
-        bam = "%s/{group}/{sample}.bam" % dirs_dict["MAPPING_DIR"],
+        bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
         # TODO: add option to profile all to all (all samples to all contigs)
         # marking the contigs.db as ancient in order to ignore timestamps.
-        contigs = ancient(lambda wildcards: dirs_dict["CONTIGS_DIR"] + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
+        contigs = ancient(dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db")
     output:
         profile = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db",
         aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5",

@@ -375,14 +375,16 @@ rule bowtie:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-bowtie.log"
     input:
-        build_output = lambda wildcards: expand(rules.bowtie_build.output, group=list(samples_information[samples_information["sample"] == wildcards.sample]["group"])),
+        build_output = rules.bowtie_build.output,
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     # setting the output as temp, since we only want to keep the bam file.
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.sam")
-    params: dir = dirs_dict["MAPPING_DIR"] + "/{sample}"
+    params:
+        dir = dirs_dict["MAPPING_DIR"] + "/{sample}"
+        bowtie_build_prefix = rules.bowtie_build.params.prefix
     threads: 10
-    shell: "bowtie2 --threads {threads} -x {input.build_output} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
+    shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
 
 
 rule samtools_view:
