@@ -12,7 +12,12 @@ The pipline includes the following steps:
 7. Profiling the individual bam files using [anvi-profile](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-profile).
 8. Merging the individual profile databases using [anvi-merge](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-merge).
 
-A directed acyclic graph (DAG) describing the workflow for a mock dataset could be found [here](mock_files_for_merenlab_metagenomics_pipeline/mock-dag.png). If you want to create a DAG for your dataset, simply run:
+A directed acyclic graph (DAG) describing the workflow for a mock dataset could be seen below:
+
+![alt text][mock_files_for_merenlab_metagenomics_pipeline/mock-dag.png]
+
+
+If you want to create a DAG for your dataset, simply run:
 
 ```
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --dag | dot -Tsvg > dag.svg
@@ -82,3 +87,8 @@ The default behaviour for this workflow is to create a contigs database for each
 
 For those of you who are learning `snakemake`, you might be surprised of how easy the switch between the modes is. All we need to do is tell the `anvi_merge` rule that we want all samples merged for each _group_, and snakemake immediatly infers that it needs to also run the extra mapping, and profiling steps. *Thank you snakemake!* (says everyone).
 
+An updated DAG for the workflow for our mock data is available below:
+
+![alt text][mock_files_for_merenlab_metagenomics_pipeline/mock-dag-all-against-all.png]
+
+A little more of a mess! But also has a beauty to it :-).

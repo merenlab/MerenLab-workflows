@@ -415,10 +415,6 @@ rule anvi_profile:
         # TODO: add option to profile all to all (all samples to all contigs)
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(lambda wildcards: dirs_dict["CONTIGS_DIR"] + "/%s-contigs.db" % samples_information[samples_information["sample"] == wildcards.sample]["group"].values[0]),
-        # this is here just so snakemake would run the taxonomy before running this rule
-        taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else rules.anvi_init_bam.output,
-        # this is here just so snakemake would run the hmms before running this rule
-        hmms = rules.anvi_run_hmms.output 
     output:
         profile = "%s/{group}/{sample}/PROFILE.db" % dirs_dict["PROFILE_DIR"],
         aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5"
@@ -472,7 +468,11 @@ rule anvi_merge:
     input:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(rules.gen_contigs_db.output),
-        profiles = input_for_anvi_merge
+        profiles = input_for_anvi_merge,
+        # this is here just so snakemake would run the taxonomy before running this rule
+        taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else ancient(rules.gen_contigs_db.output),
+        # this is here just so snakemake would run the hmms before running this rule
+        hmms = rules.anvi_run_hmms.output
     output:
         profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
         aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5"
