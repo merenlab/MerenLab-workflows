@@ -361,9 +361,13 @@ rule bowtie_build:
     log: dirs_dict["LOGS_DIR"] + "/{group}-bowtie_build.log"
     input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
     # I touch this file because the files created have different suffix
-    output: touch("%s/{group}/{group}-contigs" % dirs_dict["MAPPING_DIR"]) 
+    output:
+        o1 = expand(dirs_dict["MAPPING_DIR"] + "%s/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
+        o2 = expand(dirs_dict["MAPPING_DIR"] + "%s/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
+    params: 
+        prefix = "%s/{group}/{group}-contigs" % dirs_dict["MAPPING_DIR"] 
     threads: 4
-    shell: "bowtie2-build {input} {output} &>> {log}"
+    shell: "bowtie2-build {input} {params.prefix} &>> {log}"
 
 
 rule bowtie:
@@ -371,7 +375,7 @@ rule bowtie:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-bowtie.log"
     input:
-        build_output = lambda wildcards: expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs", group=list(samples_information[samples_information["sample"] == wildcards.sample]["group"])),
+        build_output = lambda wildcards: expand(rules.bowtie_build.output, group=list(samples_information[samples_information["sample"] == wildcards.sample]["group"])),
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
     # setting the output as temp, since we only want to keep the bam file.
