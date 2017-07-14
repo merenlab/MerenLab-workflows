@@ -331,7 +331,7 @@ rule gen_contigs_db:
         db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
     threads: 5
-    shell: "anvi-gen-contigs-database -f {input} -o {output} &>> {log}"
+    shell: "anvi-gen-contigs-database -f {input} -o {output.db} &>> {log}"
 
 
 if config["assign_taxonomy_with_centrifuge"] == "yes":
