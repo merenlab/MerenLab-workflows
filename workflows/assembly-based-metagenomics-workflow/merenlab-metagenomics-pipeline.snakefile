@@ -544,14 +544,14 @@ rule anvi_merge:
             # Still waiting to get an answer on this issue:
             # https://groups.google.com/d/msg/snakemake/zU_wkfZ7YCs/GZP0Z_RoAgAJ
             # Until then, I will just create fake file so snakemake is happy
-            message = "Only one file was profiles with {group} so there \
+            _message = "Only one file was profiles with {group} so there \
                        is nothing to merge. But don't worry, you can \
                        still use anvi-interacite with the single profile \
                        database that is here: %s" \
                        % dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db"
-            shell("echo %s > {output.profile}")
-            shell("echo %s > {output.aux}")
-            shell("echo %s > {output.runlog}")
+            shell("echo %s > {output.profile}" % _message)
+            shell("echo %s > {output.aux}" % _message)
+            shell("echo %s > {output.runlog}" % _message)
         else:
             shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations &>> {log}")
 
