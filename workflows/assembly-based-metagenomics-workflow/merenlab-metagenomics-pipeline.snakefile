@@ -538,8 +538,20 @@ rule anvi_merge:
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
         if group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
-            shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
-            shell("touch -h {params.profile_dir}/*/*")
+            #shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
+            #shell("touch -h {params.profile_dir}/*/*")
+
+            # Still waiting to get an answer on this issue:
+            # https://groups.google.com/d/msg/snakemake/zU_wkfZ7YCs/GZP0Z_RoAgAJ
+            # Until then, I will just create fake file so snakemake is happy
+            message = "Only one file was profiles with {group} so there \
+                       is nothing to merge. But don't worry, you can \
+                       still use anvi-interacite with the single profile 
+                       database that is here: %s" \
+                       % dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db"
+            shell("echo %s > {output.profile}")
+            shell("echo %s > {output.aux}")
+            shell("echo %s > {output.runlog}")
         else:
             shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations &>> {log}")
 
