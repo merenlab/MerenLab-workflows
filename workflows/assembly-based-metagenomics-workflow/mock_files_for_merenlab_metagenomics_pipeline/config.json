@@ -16,6 +16,7 @@
     "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
     "assign_taxonomy_with_centrifuge": "yes",
     "profile_AA": "yes",
+    "assign_taxonomy_with_centrifuge": "no",
     "centrifuge":{
         "db": "$CENTRIFUGE_BASE/p+h+v/p+h+v"
     }
