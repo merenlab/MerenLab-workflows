@@ -437,7 +437,7 @@ rule samtools_view:
     # output as temp. we only keep the final bam file
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: 4
-    shell: "samtools view -F 4 -bS {input} > {output} &>> {log}"
+    shell: "samtools view -F 4 -bS {input} -o {output} &>> {log}"
 
 
 rule anvi_init_bam:
