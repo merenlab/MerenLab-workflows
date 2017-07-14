@@ -173,7 +173,7 @@ rule gen_configs:
     # the input file is marked as 'ancient' so snakemake wouldn't run it
     # just because a new path-to-raw-fastq-files.txt file was created.
     input: ancient(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt")
-    output: expand("{DIR}/{sample}.ini", DIR=dirs_dict["QC_DIR"], sample=sample_names)
+    output: temp(expand("{DIR}/{sample}.ini", DIR=dirs_dict["QC_DIR"], sample=sample_names))
     params: dir=dirs_dict["QC_DIR"]
     shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
 
