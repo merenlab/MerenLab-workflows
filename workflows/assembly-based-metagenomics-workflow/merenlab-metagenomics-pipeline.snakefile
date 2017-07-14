@@ -229,9 +229,9 @@ rule megahit:
     input: unpack(input_for_megahit)
     params:
         # the minimum length for contig (smaller contigs will be discarded)
-        MIN_CONTIG_LENGTH_FOR_ASSEMBLY = config["MIN_CONTIG_LENGTH_FOR_ASSEMBLY"],
+        MIN_CONTIG_LENGTH_FOR_ASSEMBLY = A("MIN_CONTIG_LENGTH_FOR_ASSEMBLY",config),
         # portion of total memory to use by megahit
-        memory_portion_usage_for_assembly = config["memory_portion_usage_for_assembly"]
+        memory_portion_usage_for_assembly = A("memory_portion_usage_for_assembly",config)
     # output folder for megahit is temporary (using the snakemake temp())
     # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
     # the files that were created stay there.
