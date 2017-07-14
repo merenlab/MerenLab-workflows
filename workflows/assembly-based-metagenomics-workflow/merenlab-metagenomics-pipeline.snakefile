@@ -74,7 +74,7 @@ configfile: "config.json"
 dir_list = ["LOGS_DIR", "QC_DIR", "ASSEMBLY_DIR", "CONTIGS_DIR", "MAPPING_DIR", "PROFILE_DIR", "MERGE_DIR"]
 dir_names = ["00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"]
 dirs_dict = dict(zip(dir_list, dir_names))
-A = lambda x,y: y[x] if x in y else None
+A = lambda x,y: y[x] if x in y else ""
 if "output_dirs" in config:
     for d in config["output_dirs"]:
         # renaming folders according to the config file, if the user specified.
