@@ -526,7 +526,7 @@ rule anvi_merge:
         hmms = rules.anvi_run_hmms.output
     output:
         profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
-        aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5"
+        aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5",
         runlog = dirs_dict["MERGE_DIR"] + "/{group}/RUNLOG.txt"
     threads: 1
     params:
