@@ -25,13 +25,11 @@ cd $output_dir
 
 INFO "Call snakefile"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          --cluster 'clusterize -n {threads} -log {log}' \
-          --jobs 4 --latency-wait 100 $cmd
+          $cmd
 
 INFO "Call snakefile with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          --cluster 'clusterize -n {threads} -log {log}' \
-          --jobs 4 --latency-wait 100 $cmd \
+          $cmd \
           --config all_against_all='True'
 
 INFO "create samples.txt"
@@ -51,14 +49,12 @@ touch XX2.fa
 
 INFO "Call snakefile with group list"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          --cluster 'clusterize -n {threads} -log {log}' \
-          --jobs 4 --latency-wait 100 -np \
+          -np \
           --config references_txt='references.txt'
 
 INFO "Call snakefile with group list with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          --cluster 'clusterize -n {threads} -log {log}' \
-          --jobs 4 --latency-wait 100 -np \
+          -np \
           --config references_txt='references.txt'\
           all_against_all='True'
 
