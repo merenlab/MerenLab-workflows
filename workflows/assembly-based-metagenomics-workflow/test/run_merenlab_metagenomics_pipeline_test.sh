@@ -5,29 +5,33 @@ source 00.sh
 SETUP_WITH_OUTPUT_DIR $1
 #####################################
 
+cmd="-np"
+# if you want the test to actually run through the pipeline
+# then call it like this: bash run_merenlab_metagenomics_pipeline_test.sh sandbox/test-output full
+if [ $# -eq 2 ]; then
+    if [ $2 == "full" ]; then
+        cmd=""
+    fi
+fi
 # copy latest script here
 cp ../merenlab-metagenomics-pipeline.snakefile $output_dir
 cp ../mock_files_for_merenlab_metagenomics_pipeline/*json $output_dir
+cp -R ../mock_files_for_merenlab_metagenomics_pipeline/three_samples_example/ $output_dir
+cp ../mock_files_for_merenlab_metagenomics_pipeline/samples.txt $output_dir
+cp ../mock_files_for_merenlab_metagenomics_pipeline/samples-no-groups.txt $output_dir
 
 # we have to go into the test directory because snakemake requires you run the command from the directory where the snakemake is
 cd $output_dir
 
-INFO "create samples.txt"
-echo -e "sample\tgroup\tr1\tr2" > samples.txt
-echo -e "S01\tG01\tS01_R1.fastq.gz\tS01_R2.fastq.gz" >> samples.txt
-echo -e "S02\tG02\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
-echo -e "S03\tG02\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
-
-
 INFO "Call snakefile"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           --cluster 'clusterize -n {threads} -log {log}' \
-          --jobs 4 --latency-wait 100 -np
+          --jobs 4 --latency-wait 100 $cmd
 
 INFO "Call snakefile with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           --cluster 'clusterize -n {threads} -log {log}' \
-          --jobs 4 --latency-wait 100 -np \
+          --jobs 4 --latency-wait 100 $cmd \
           --config all_against_all='True'
 
 INFO "create samples.txt"
