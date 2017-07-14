@@ -546,7 +546,7 @@ rule anvi_merge:
             # Until then, I will just create fake file so snakemake is happy
             message = "Only one file was profiles with {group} so there \
                        is nothing to merge. But don't worry, you can \
-                       still use anvi-interacite with the single profile 
+                       still use anvi-interacite with the single profile \
                        database that is here: %s" \
                        % dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db"
             shell("echo %s > {output.profile}")
