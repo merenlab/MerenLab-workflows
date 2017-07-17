@@ -582,7 +582,7 @@ rule anvi_merge:
         if not input.profiles:
             # there are no profiles to merge.
             # this should only happen if all profiles were empty.
-            _message = "Nothing to merge for {group}. This should \
+            _message = "Nothing to merge for %s. This should \
                         only happen if all profiles were empty \
                         (you can check the log file: {log} to see \
                         if that is indeed the case). \
@@ -595,7 +595,8 @@ rule anvi_merge:
                         and you got your answer: whatever you have in \
                         your fasta file is not represented in your  \
                         metagenomes. Feel free to contact us if you think \
-                        That this is our fault. sincerely, Meren Lab"
+                        That this is our fault. sincerely, Meren Lab" \
+                        % wildcards.group
             # creating the expected output files for the rule
             create_fake_output_files(_message, output)
 
@@ -607,19 +608,21 @@ rule anvi_merge:
             # Still waiting to get an answer on this issue:
             # https://groups.google.com/d/msg/snakemake/zU_wkfZ7YCs/GZP0Z_RoAgAJ
             # Until then, I will just create fake file so snakemake is happy
-            _message = "Only one file was profiles with {group} so there \
+            _message = "Only one file was profiles with %s so there \
                        is nothing to merge. But don't worry, you can \
                        still use anvi-interacite with the single profile \
                        database that is here: %s" \
-                       % dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db"
+                       % (dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db", \
+                       wildcards.group)
             create_fake_output_files(_message, output)
 
         elif len(input.profiles) == 1:
             # if only one sample is not empty, but the group size was 
             # bigger than 1 then it means that --cluster-contigs was 
             # not performed during anvi-profile.
-            _message = "Only one samlpe had reads recruited to {group} \
-                        and hence merging could not occur."
+            _message = "Only one samlpe had reads recruited to %s \
+                        and hence merging could not occur." \
+                        % wildcards.group
             create_fake_output_files(_message, output)
 
         else:
