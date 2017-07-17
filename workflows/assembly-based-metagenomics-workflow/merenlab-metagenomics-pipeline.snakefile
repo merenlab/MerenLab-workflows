@@ -56,6 +56,8 @@ import os
 import anvio
 import pandas as pd
 import anvio.utils as u
+import anvio.dbops as dbops
+import anvio.terminal as terminal
 
 from anvio.errors import ConfigError
 
@@ -66,6 +68,9 @@ __license__ = "GPL 3.0"
 __version__ = anvio.__version__
 __maintainer__ = "Alon Shaiber"
 __email__ = "alon.shaiber@gmail.com"
+
+run = terminal.Run()
+progress = terminal.Progress()
 
 # The config file contains many essential configurations for the workflow
 configfile: "config.json"
@@ -504,6 +509,40 @@ def input_for_anvi_merge(wildcards):
     return profiles
 
 
+    def create_fake_output_files(_message, output):
+        # creating "fake" output files with an informative message for 
+        # user.
+        for o in output:
+            shell("echo %s > %s" % (_message, o))
+
+def remove_empty_profile_databases(profiles, group):
+    '''remove profiles that recruited zero reads from the metagenome.'''
+
+    empty_profiles = []
+    progress.new("Checking for empty profile databases")
+    for p in profiles:
+        db = dbops.ProfileDatabase(p)
+        print(dir(db)) 
+        n = next(iter(db.meta['total_reads_mapped'].values()))
+        if n == 0:
+            # this profile is empty so we can't include it in the merged profile.
+            profiles.remove(p)
+            empty_profiles.append(p)
+    progress.end()
+
+    return profiles
+
+    if not profiles:
+        # if there are no profiles to merge then notify the user
+        run.warning('It seems that all your profiles are empty for the \
+                     contigs database: %s.db. And so cannot be merged.' \
+                     % group)
+
+    run.info('Number of non-empty profile databases', len(profiles))
+    run.info('Number of empty profile databases', len(empty_profiles))
+    if len(empty_profiles) > 0:
+        run.info('The following databases are empty: %s' % empty_profiles,)
+
 rule anvi_merge:
     '''
         If there are multiple profiles mapped to the same contigs database,
@@ -536,7 +575,31 @@ rule anvi_merge:
     run:
         # using run instead of shell so we can choose the appropriate shell command.
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
-        if group_sizes[wildcards.group] == 1:
+
+        # remove empty profile databases
+        input.profiles = remove_empty_profile_databases(input.profiles, wildcards.group)
+        
+        if not input.profiles:
+            # there are no profiles to merge.
+            # this should only happen if all profiles were empty.
+            _message = "Nothing to merge for {group}. This should \
+                        only happen if all profiles were empty \
+                        (you can check the log file: {log} to see \
+                        if that is indeed the case). \
+                        This file was created just so that your workflow \
+                        would continue with no error (snakemake expects \
+                        to find these output files and if we don't create \
+                        them, then it will be upset). As we see it, \
+                        there is no reason to throw an error here, since \
+                        you mapped your metagenome to some fasta files \
+                        and you got your answer: whatever you have in \
+                        your fasta file is not represented in your  \
+                        metagenomes. Feel free to contact us if you think \
+                        That this is our fault. sincerely, Meren Lab"
+            # creating the expected output files for the rule
+            create_fake_output_files_for_anvi_merge(_message, output)
+
+        elif group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
             #shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
             #shell("touch -h {params.profile_dir}/*/*")
@@ -549,9 +612,16 @@ rule anvi_merge:
                        still use anvi-interacite with the single profile \
                        database that is here: %s" \
                        % dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db"
-            shell("echo %s > {output.profile}" % _message)
-            shell("echo %s > {output.aux}" % _message)
-            shell("echo %s > {output.runlog}" % _message)
+            create_fake_output_files(_message, output)
+
+        elif len(input.profiles) == 1:
+            # if only one sample is not empty, but the group size was 
+            # bigger than 1 then it means that --cluster-contigs was 
+            # not performed during anvi-profile.
+            _message = "Only one samlpe had reads recruited to {group} \
+                        and hence merging could not occur."
+            create_fake_output_files(_message, output)
+
         else:
             shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations &>> {log}")
 
