@@ -513,7 +513,8 @@ def create_fake_output_files(_message, output):
     # creating "fake" output files with an informative message for 
     # user.
     for o in output:
-        shell("echo %s > %s" % (_message, o))
+        with opne(o, 'w') as f:
+            f.write(_message + '\n')
 
 def remove_empty_profile_databases(profiles, group):
     '''remove profiles that recruited zero reads from the metagenome.'''
@@ -582,19 +583,19 @@ rule anvi_merge:
         if not input.profiles:
             # there are no profiles to merge.
             # this should only happen if all profiles were empty.
-            _message = "Nothing to merge for %s. This should" \
-                       "only happen if all profiles were empty" \
-                       "(you can check the log file: {log} to see" \
-                       "if that is indeed the case)." \
-                       "This file was created just so that your workflow" \
-                       "would continue with no error (snakemake expects" \
-                       "to find these output files and if we don't create" \
-                       "them, then it will be upset). As we see it," \
-                       "there is no reason to throw an error here, since" \
-                       "you mapped your metagenome to some fasta files" \
-                       "and you got your answer: whatever you have in" \
-                       "your fasta file is not represented in your " \
-                       "metagenomes. Feel free to contact us if you think" \
+            _message = "Nothing to merge for %s. This should " \
+                       "only happen if all profiles were empty " \
+                       "(you can check the log file: {log} to see " \
+                       "if that is indeed the case). " \
+                       "This file was created just so that your workflow " \
+                       "would continue with no error (snakemake expects " \
+                       "to find these output files and if we don't create " \
+                       "them, then it will be upset). As we see it, " \
+                       "there is no reason to throw an error here, since " \
+                       "you mapped your metagenome to some fasta files " \
+                       "and you got your answer: whatever you have in " \
+                       "your fasta file is not represented in your  " \
+                       "metagenomes. Feel free to contact us if you think " \
                        "That this is our fault. sincerely, Meren Lab" \
                        % wildcards.group
             # creating the expected output files for the rule
@@ -608,9 +609,9 @@ rule anvi_merge:
             # Still waiting to get an answer on this issue:
             # https://groups.google.com/d/msg/snakemake/zU_wkfZ7YCs/GZP0Z_RoAgAJ
             # Until then, I will just create fake file so snakemake is happy
-            _message = "Only one file was profiles with %s so there" \
-                       "is nothing to merge. But don't worry, you can" \
-                       "still use anvi-interacite with the single profile" \
+            _message = "Only one file was profiles with %s so there " \
+                       "is nothing to merge. But don't worry, you can " \
+                       "still use anvi-interacite with the single profile " \
                        "database that is here: %s" \
                        % (wildcards.group, input.profiles)
             create_fake_output_files(_message, output)
@@ -619,7 +620,7 @@ rule anvi_merge:
             # if only one sample is not empty, but the group size was 
             # bigger than 1 then it means that --cluster-contigs was 
             # not performed during anvi-profile.
-            _message = "Only one samlpe had reads recruited to %s" \
+            _message = "Only one samlpe had reads recruited to %s " \
                        "and hence merging could not occur." \
                        % wildcards.group
             create_fake_output_files(_message, output)
