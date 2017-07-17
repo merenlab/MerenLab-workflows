@@ -509,11 +509,11 @@ def input_for_anvi_merge(wildcards):
     return profiles
 
 
-    def create_fake_output_files(_message, output):
-        # creating "fake" output files with an informative message for 
-        # user.
-        for o in output:
-            shell("echo %s > %s" % (_message, o))
+def create_fake_output_files(_message, output):
+    # creating "fake" output files with an informative message for 
+    # user.
+    for o in output:
+        shell("echo %s > %s" % (_message, o))
 
 def remove_empty_profile_databases(profiles, group):
     '''remove profiles that recruited zero reads from the metagenome.'''
@@ -597,7 +597,7 @@ rule anvi_merge:
                         metagenomes. Feel free to contact us if you think \
                         That this is our fault. sincerely, Meren Lab"
             # creating the expected output files for the rule
-            create_fake_output_files_for_anvi_merge(_message, output)
+            create_fake_output_files(_message, output)
 
         elif group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
