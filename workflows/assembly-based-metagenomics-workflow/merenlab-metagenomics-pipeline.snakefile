@@ -22,7 +22,7 @@
         "CLUSTER_CONTIGS": "--cluster-contigs"
     }
 
-    samples.txt - 
+    samples.txt -
         TAB-delimited file to describe where samples are. The
         header line should be "sample", "r1", and "r2". Each
         row should list the sample name in the first column,
@@ -31,18 +31,18 @@
 
 
     An example run of this workflow on the barhal server:
-    $ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \ 
+    $ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
                 --cluster-config cluster.json --cluster 'clusterize  \
-                -n {threads} -log {log}' --jobs 4 --latency-wait 100 -p 
+                -n {threads} -log {log}' --jobs 4 --latency-wait 100 -p
 
     Note on rule order: whenever the order of rule execution was ambiguous
         mypreferred approach was to use the rule dependencies. See:
         http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#rule-dependencies
 
-    Note on cluster configuration: because multiple rules require the 
+    Note on cluster configuration: because multiple rules require the
     number of threads as input (for example anvi-profil, megahit), and I
     couldn't find a way to make the number of threads from the
-    cluster.config file available within rules, then instead I define the 
+    cluster.config file available within rules, then instead I define the
     number of threads within each rule. I'm aware it's less elegant than
     having all cluster configuration in the cluster.json file, and would
     love to learn about an alternative solution if you have one.
@@ -79,18 +79,56 @@ configfile: "config.json"
 dir_list = ["LOGS_DIR", "QC_DIR", "ASSEMBLY_DIR", "CONTIGS_DIR", "MAPPING_DIR", "PROFILE_DIR", "MERGE_DIR"]
 dir_names = ["00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"]
 dirs_dict = dict(zip(dir_list, dir_names))
-A = lambda x,y: y[x] if x in y else ""
-if "output_dirs" in config:
-    for d in config["output_dirs"]:
-        # renaming folders according to the config file, if the user specified.
-        if d not in dir_list:
-            # making sure the user is asking to rename an existing folder.
-            raise ConfigError("You define a name for the directory '%s' in your \
-                               config file, but the only available folders are: \
-                               %s" % (d, dir_list))
+
+
+
+
+
+
+def A(_list, d, default_value = ""):
+    '''
+        A helper function to make sense of config details.
+        string_list is a list of strings (or a single string)
+        d is a dictionary
+
+        this function checks if the strings in x are nested values in y.
+        For example if x = ['a','b','c'] then this function checkes if the
+        value y['a']['b']['c'] exists, if it does then it is returned
+    '''
+    # converting to list for the cases of only one item
+    if type(_list) is not list:
+        _list = [_list]
+    while _list:
+        a = _list.pop(0)
+        if a in d:
+            d = d[a]
+        else:
+            return default_value
+    return d
+
+
+for d in A("output_dirs", config):
+    # renaming folders according to the config file, if the user specified.
+    if d not in dir_list:
+        # making sure the user is asking to rename an existing folder.
+        raise ConfigError("You define a name for the directory '%s' in your "\
+                          "config file, but the only available folders are: "\
+                          "%s" % (d, dir_list))
 
         dirs_dict[d] = A(d,config["output_dirs"])
 
+# setting configuration for optional steps
+run_remove_human_dna_using_centrifuge = A(["remove_human_dna_using_centrifuge", "run"], config)
+# default is NOT running taxonomy with centrifuge
+run_taxonomy_with_centrifuge = A(["run_centrifuge", "run"], config)
+# default is running anvi_run_hmms
+run_anvi_run_hmms = A(["anvi_run_hmms", "run"], config, default_value=True)
+# Sanity check for centrifuge db
+if run_taxonomy_with_centrifuge:
+    if not A(["run_centrifuge", "db"], config):
+        raise ConfigError("If you plan to run centrifuge, then you must "\
+                          "provide a path for the centrifuge db in the "\
+                          "config file. See documentation for more details.")
 
 #If it doesn't already exist then create a 00_LOGS folder
 os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
@@ -98,12 +136,8 @@ os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
 
 
 # loading the samples.txt file
-if "samples_txt" in config:
-    # Checking if user provided a name for the samples text file.
-    samples_txt_file = config["samples_txt"]
-else:
-    # The default samples file is samples.txt
-    samples_txt_file = "samples.txt"
+# The default samples file is samples.txt
+samples_txt_file = A("samples_txt", config, default_value="samples.txt")
 # getting the samples information (names, [group], path to r1, path to r2) from samples.txt
 samples_information = pd.read_csv(samples_txt_file, sep='\t', index_col=False)
 # get a list of the sample names
@@ -141,15 +175,15 @@ else:
     if 'references_txt' in config:
         # if the user didn't provide a group column in the samples.txt,
         # in reference mode the default is 'all_against_all'.
-        config['all_against_all'] = 'True'
+        config['all_against_all'] = True
     else:
-        # if not groups were specified then each sample would be assembled 
+        # if not groups were specified then each sample would be assembled
         # separately
         samples_information['group'] = samples_information['sample']
         group_names = list(sample_names)
         group_sizes = dict.fromkeys(group_names,1)
-    
-if A('all_against_all', config) == 'True':
+
+if A('all_against_all', config) :
     # in all_against_all, the size of each group is as big as the number
     # of samples.
     group_sizes = dict.fromkeys(group_names,len(sample_names))
@@ -190,7 +224,7 @@ rule qc:
     # making the config file as "ancient" so QC wouldn't run just because
     # a new config file was produced.
     input: ancient(dirs_dict["QC_DIR"] + "/{sample}.ini")
-    output: 
+    output:
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq"
     threads: 4
@@ -218,12 +252,12 @@ def input_for_megahit(wildcards):
 
 
 rule megahit:
-    ''' 
+    '''
         Assembling fastq files using megahit.
-        Notice that megahit requires a directory to be specified as 
+        Notice that megahit requires a directory to be specified as
         output. If the directory already exists then megahit will not
-        run. To avoid this, the output for this rule is defined as the 
-        directory (and not the assembly fasta file), because if the 
+        run. To avoid this, the output for this rule is defined as the
+        directory (and not the assembly fasta file), because if the
         fasta file was defined as the output of the rule, then snakemake
         would automaticaly creates the directory.
         All files created by megahit are stored in a temporary folder,
@@ -234,9 +268,9 @@ rule megahit:
     input: unpack(input_for_megahit)
     params:
         # the minimum length for contig (smaller contigs will be discarded)
-        MIN_CONTIG_LENGTH_FOR_ASSEMBLY = A("MIN_CONTIG_LENGTH_FOR_ASSEMBLY",config),
+        MIN_CONTIG_LENGTH_FOR_ASSEMBLY = int(A(["megahit", "MIN_CONTIG_LENGTH_FOR_ASSEMBLY"], config, default_value="1000")),
         # portion of total memory to use by megahit
-        memory_portion_usage_for_assembly = A("memory_portion_usage_for_assembly",config)
+        memory_portion_usage_for_assembly = float(A(["megahit", "memory_portion_usage_for_assembly"], config, default_value=0.4))
     # output folder for megahit is temporary (using the snakemake temp())
     # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
     # the files that were created stay there.
@@ -245,14 +279,14 @@ rule megahit:
     run:
         r1 = ','.join(input.r1)
         r2 = ','.join(input.r2)
-        
+
         cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
             " --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY}" + \
             " -m {params.memory_portion_usage_for_assembly}" + \
             " -o {output}" + \
             " -t {threads}" + \
             " &>> {log}"
-        print(cmd)
+        print("Running: %s" % cmd)
         shell(cmd)
 
 
@@ -312,7 +346,7 @@ rule reformat_fasta:
         "file:wrappers/reformat-fasta"
 
 
-if config["remove_human_contamination"] == "yes":
+if run_remove_human_dna_using_centrifuge:
     # These rules will only run if the user asked for removal of Human contamination
     rule remove_human_dna_using_centrifuge:
         """ this is just a placeholder for now """
@@ -329,9 +363,9 @@ rule gen_contigs_db:
     version: anvio.__contigs__version__
     log: dirs_dict["LOGS_DIR"] + "/{group}-gen_contigs_db.log"
     # depending on whether human contamination using centrifuge was done
-    # or not, the input to this rule will be the raw assembly or the 
+    # or not, the input to this rule will be the raw assembly or the
     # filtered.
-    input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
+    input: rules.remove_human_dna_using_centrifuge.output if run_remove_human_dna_using_centrifuge else rules.reformat_fasta.output.contig
     output:
         db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
@@ -339,7 +373,7 @@ rule gen_contigs_db:
     shell: "anvi-gen-contigs-database -f {input} -o {output.db} &>> {log}"
 
 
-if config["assign_taxonomy_with_centrifuge"] == "yes":
+if run_taxonomy_with_centrifuge:
     # If the user wants taxonomy to be assigned with centrifuge
     # then these following rules would run.
     rule export_gene_calls:
@@ -383,22 +417,23 @@ if config["assign_taxonomy_with_centrifuge"] == "yes":
         shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &>> {log}"
 
 
-rule anvi_run_hmms:
-    """ Run anvi-run-hmms"""
-    # TODO: add rule for running hmms for ribosomal genes and import
-    # their new gene calls. 
-    version: 1.0
-    log: dirs_dict["LOGS_DIR"] + "/{group}-anvi_run_hmms.log"
-    # if the user requested to run taxonomy using centrifuge, then this
-    # will be ran only after centrifuge finished. Otherwise, this rule
-    # will run after anvi-gen-contigs-database
-    # marking the input as ancient in order to ignore timestamps.
-    input: ancient(rules.gen_contigs_db.output.db)
-    # using a snakemake flag file as an output since no file is generated
-    # by the rule.
-    output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
-    threads: 20
-    shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
+if run_anvi_run_hmms:
+    rule anvi_run_hmms:
+        """ Run anvi-run-hmms"""
+        # TODO: add rule for running hmms for ribosomal genes and import
+        # their new gene calls.
+        version: 1.0
+        log: dirs_dict["LOGS_DIR"] + "/{group}-anvi_run_hmms.log"
+        # if the user requested to run taxonomy using centrifuge, then this
+        # will be ran only after centrifuge finished. Otherwise, this rule
+        # will run after anvi-gen-contigs-database
+        # marking the input as ancient in order to ignore timestamps.
+        input: ancient(rules.gen_contigs_db.output.db)
+        # using a snakemake flag file as an output since no file is generated
+        # by the rule.
+        output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
+        threads: 20
+        shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
 
 
 rule bowtie_build:
@@ -406,12 +441,12 @@ rule bowtie_build:
     # TODO: consider runnig this as a shadow rule
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-bowtie_build.log"
-    input: rules.remove_human_dna_using_centrifuge.output if config["remove_human_contamination"] == "yes" else rules.reformat_fasta.output.contig
+    input: rules.remove_human_dna_using_centrifuge.output if run_remove_human_dna_using_centrifuge else rules.reformat_fasta.output.contig
     # I touch this file because the files created have different suffix
     output:
         o1 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
         o2 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
-    params: 
+    params:
         prefix = dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs"
     threads: 4
     shell: "bowtie2-build {input} {params.prefix} &>> {log}"
@@ -476,12 +511,13 @@ rule anvi_profile:
         runlog = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/RUNLOG.txt"
     params:
         # minimal length of contig to include in the profiling
-        MIN_CONTIG_SIZE_FOR_PROFILE_DB = config["MIN_CONTIG_SIZE_FOR_PROFILE_DB"],
+        # if not specified in the config file then default is 2,500.
+        MIN_CONTIG_SIZE_FOR_PROFILE_DB = A(["anvi_profile", "MIN_CONTIG_SIZE_FOR_PROFILE_DB"], config, default_value=2500),
         # if profiling to individual assembly then clustering contigs
         # see --cluster-contigs in the help manu of anvi-profile
         cluster_contigs = lambda wildcards: '--cluster-contigs' if group_sizes[wildcards.group] == 1 else '',
         name = "{sample}",
-        profile_AA = "--profile-AA-frequencies" if config["profile_AA"] == "yes" else "",
+        profile_AA = "--profile-AA-frequencies" if A(["anvi_profile", "profile_AA"], config)  else "",
         output_dir = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}"
     threads: 5
     shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
@@ -496,7 +532,7 @@ def input_for_anvi_merge(wildcards):
         between these modes.
     '''
 
-    if A('all_against_all', config) == 'True':
+    if A('all_against_all', config):
         # If the user specified 'all against all' in the configs file
         # the end product would be a merge of all samples per group
         profiles = expand(dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db", sample=list(samples_information['sample']), group=wildcards.group)
@@ -510,11 +546,12 @@ def input_for_anvi_merge(wildcards):
 
 
 def create_fake_output_files(_message, output):
-    # creating "fake" output files with an informative message for 
+    # creating "fake" output files with an informative message for
     # user.
     for o in output:
-        with opne(o, 'w') as f:
+        with open(o, 'w') as f:
             f.write(_message + '\n')
+
 
 def remove_empty_profile_databases(profiles, group):
     '''remove profiles that recruited zero reads from the metagenome.'''
@@ -523,7 +560,6 @@ def remove_empty_profile_databases(profiles, group):
     progress.new("Checking for empty profile databases")
     for p in profiles:
         db = dbops.ProfileDatabase(p)
-        print(dir(db)) 
         n = next(iter(db.meta['total_reads_mapped'].values()))
         if n == 0:
             # this profile is empty so we can't include it in the merged profile.
@@ -544,6 +580,7 @@ def remove_empty_profile_databases(profiles, group):
     if len(empty_profiles) > 0:
         run.info('The following databases are empty: %s' % empty_profiles,)
 
+
 rule anvi_merge:
     '''
         If there are multiple profiles mapped to the same contigs database,
@@ -561,9 +598,9 @@ rule anvi_merge:
         contigs = ancient(rules.gen_contigs_db.output.db),
         profiles = input_for_anvi_merge,
         # this is here just so snakemake would run the taxonomy before running this rule
-        taxonomy = rules.import_taxonomy.output if config["assign_taxonomy_with_centrifuge"] == "yes" else ancient(rules.gen_contigs_db.output.db),
+        taxonomy = rules.import_taxonomy.output if run_taxonomy_with_centrifuge else ancient(rules.gen_contigs_db.output.db),
         # this is here just so snakemake would run the hmms before running this rule
-        hmms = rules.anvi_run_hmms.output
+        hmms = rules.anvi_run_hmms.output if run_anvi_run_hmms else ancient(rules.gen_contigs_db.output.db)
     output:
         profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
         aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5",
@@ -579,7 +616,7 @@ rule anvi_merge:
 
         # remove empty profile databases
         input.profiles = remove_empty_profile_databases(input.profiles, wildcards.group)
-        
+
         if not input.profiles:
             # there are no profiles to merge.
             # this should only happen if all profiles were empty.
@@ -617,8 +654,8 @@ rule anvi_merge:
             create_fake_output_files(_message, output)
 
         elif len(input.profiles) == 1:
-            # if only one sample is not empty, but the group size was 
-            # bigger than 1 then it means that --cluster-contigs was 
+            # if only one sample is not empty, but the group size was
+            # bigger than 1 then it means that --cluster-contigs was
             # not performed during anvi-profile.
             _message = "Only one samlpe had reads recruited to %s " \
                        "and hence merging could not occur." \

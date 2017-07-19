@@ -1,13 +1,15 @@
 # Snakemake workflow for assembly based metagenomics
 
+**Important note**: this pipeline was evaluated using snakemake version 3.12.0. If you are using an older version, then we suggest upgrading to the oldest version
+
 The majority of the steps used in this pipeline are extensively described in the [anvi'o user tutorial for metagenomic workflow](http://merenlab.org/2016/06/22/anvio-tutorial-v2/). But this pipeline includes also the first steps that are not described in the anvi'o user tutorial for metagenomic workflow. The entering point to this pipeline are the unprocessed raw reads of a collection (or a single) metagenomes, and the output of the pipline is an anvi'o merged profile database ready for refinement of bins (or whatever it is that you want to do with it).
 The pipline includes the following steps:
 
 1. QC of the metagenomes using [illumina-utils](https://github.com/merenlab/illumina-utils/).
 2. (Co-)Assembly using [megahit](https://github.com/voutcn/megahit).
 3. Generating an anvi'o CONTIGS database.
-4. Store HMM hits in the CONTIGS database using [anvi-run-hmms](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-run-hmms).
-5. Run [centrifuge](https://ccb.jhu.edu/software/centrifuge/) and import taxonomy to the CONTIGS database using [anvi-import-taxonomy](http://merenlab.org/2016/06/18/importing-taxonomy/).
+4. Store HMM hits in the CONTIGS database using [anvi-run-hmms](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-run-hmms) (optional step).
+5. Run [centrifuge](https://ccb.jhu.edu/software/centrifuge/) and import taxonomy to the CONTIGS database using [anvi-import-taxonomy](http://merenlab.org/2016/06/18/importing-taxonomy/) (optional step).
 6. Mapping short reads using [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml).
 7. Profiling the individual bam files using [anvi-profile](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-profile).
 8. Merging the individual profile databases using [anvi-merge](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-merge).
@@ -40,7 +42,9 @@ If nothing was provided in the config file then the default is `samples.txt`.
 
 To make changes easy and accessible for the user, we tried our best to make all relevant configurations available
 to the user using a `json` formatted config file, and thus avoiding the need to change the Snakefile. For an example 
-config file go [here](mock_files_for_merenlab_metagenomics_pipeline/config.json).
+config file go [here](mock_files_for_merenlab_metagenomics_pipeline/config.json). There are some general configurations, and there are step specific configurations.
+
+## General configurations
 
 ### Output directories
 
@@ -61,22 +65,6 @@ Don't like these names? You can specify what is the name of the folder, by provi
 You can change all or just some of the names of these folders.
 And you can provide an absolute path or a relative path.
 
-### Optional steps
-
-The following steps are only optional (the default behaviour is to run all optional steps):
-1. Assigning taxonomy with centrifuge.
-2. Running hmm profiles on the contigs database.
-
-To choose not to run these steps add these lines in your config file:
-```
-    "run_centrifuge":{
-        "run": "False"
-    },
-    "anvi_run_hmms":{
-        "run": "False"
-    }
-```
-
 ### The "all against all" option
 
 The default behaviour for this workflow is to create a contigs database for each _group_ and map (and profile, and merge) the samples that belong to that _group_. If you wish to map all samples to all contigs, use the `all_against_all` option in the config file:
@@ -93,10 +81,78 @@ An updated DAG for the workflow for our mock data is available below:
 
 A little more of a mess! But also has a beauty to it :-).
 
+### Optional steps
 
+The following steps are only optional:
+
+1. Assigning taxonomy with centrifuge (default is **not** running).
+2. Running hmm profiles on the contigs database (default is **running**).
+
+For more details refer to the specific documentation for these steps below.
+
+## Step-specific configurations 
+
+Some of the steps in the workflow have parameters with defaults that could be changed. We tried to keep things flexible and accessible for the user, but we know we didn't do everything possible. If there is something that you want to have access to and is not possible, please create an issue on [github](https://github.com/merenlab/MerenLab-workflows/issues). Or, better yet, make those changes and send us a pull request. We plan to do a better job to let you access in a flexible form all the parameters of each step, and if this is of special interest to you, you can refer to the note below regarding wrappers.
+
+The step-specific configurations in the `config.json` file always have the following structure:
+```
+	"step_name":{
+		"configurable_parameter": "value"
+	}
+```
+
+Notice that everything has to have quotation marks (to be compatible with the JSON format).
+
+### `megahit`
+
+The following parameters are available:
+
+`memory_portion_usage_for_assembly` (see `-m/--memory` in the megahit documentation) - The default is 0.4.
+
+`MIN_CONTIG_LENGTH_FOR_ASSEMBLY` (`--min-contig-len`) - default is 1,000.
+
+### `run_centrifuge`
+
+`run` - could get values of `true` or `false` (all lower case!) - to configure whether to run centrifuge or not. The default is `false`.
+
+`db` - if you choose run centrifuge, you **must** provide the path to the database (for example `$CENTRIFUGE_BASE/p+h+v/p+h+v`).
+
+### `run_anvi_hmms`
+
+`run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
+
+### `anvi_profile`
+
+`MIN_CONTIG_SIZE_FOR_PROFILE_DB` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
+
+### example
+
+So let's say I want to run centrifuge, I don't want to run hmms, and I want my minimum contig length for megahit and anvi-profile to be 500 and and 3,000 respectively. Then my config file would like like this:
+
+```
+{
+	"run_centrifuge":{
+		"run": true,
+		"db": "$CENTRIFUGE_BASE/p+h+v/p+h+v"
+	},
+	"run_anvi_hmms":{
+		"run": false
+	},
+	"anvi_profile:{
+		"MIN_CONTIG_SIZE_FOR_PROFILE_DB": 3000
+	},
+	"megahit":{
+		"MIN_CONTIG_LENGTH_FOR_ASSEMBLY": 500
+	}
+}
+```
 ## Estimating occurence of population genomes in metagenomes
 
 Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
 In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using to `.txt` files: `samples.txt`, and `references.txt`. The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used. If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
 
 ![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
+
+## wrappers
+
+add a note about transferring to wrappers

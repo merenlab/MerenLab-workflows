@@ -9,15 +9,20 @@
         "PROFILE_DIR" : "05_ANVIO_PROFILE",
         "MERGE_DIR" : "06_MERGED"
     },
-    "all_against_all": "False",
-    "remove_human_contamination": "no",
-    "memory_portion_usage_for_assembly": "0.4",
-    "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",
-    "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
-    "assign_taxonomy_with_centrifuge": "yes",
-    "profile_AA": "yes",
-    "assign_taxonomy_with_centrifuge": "no",
+    "all_against_all": false,
+    "remove_human_contamination":{
+        "run": false
+    },
+    "megahit":{
+        "memory_portion_usage_for_assembly": 0.4,
+        "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": 1000
+    },
+    "anvi_profile":{
+        "MIN_CONTIG_SIZE_FOR_PROFILE_DB": 2500,
+        "profile_AA": true
+    },
     "centrifuge":{
+        "run": true,
         "db": "$CENTRIFUGE_BASE/p+h+v/p+h+v"
     }
 }

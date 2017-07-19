@@ -5,7 +5,7 @@ source 00.sh
 SETUP_WITH_OUTPUT_DIR $1
 #####################################
 
-cmd="-np"
+cmd="-pn"
 # if you want the test to actually run through the pipeline
 # then call it like this: bash run_merenlab_metagenomics_pipeline_test.sh sandbox/test-output full
 if [ $# -eq 2 ]; then
@@ -31,7 +31,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 INFO "Call snakefile with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
-          --config all_against_all='True'
+          --config all_against_all=True
+          output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL"}'
+
 
 INFO "create samples.txt"
 echo -e "sample\tgroup\tr1\tr2" > samples.txt
@@ -53,11 +55,13 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           -np \
           --config references_txt='references.txt'
 
+
 INFO "Call snakefile with group list with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           -np \
           --config references_txt='references.txt'\
-          all_against_all='True'
+          all_against_all=True
+
 
 
 INFO "create samples.txt with no group column"
@@ -66,7 +70,7 @@ echo -e "S01\tS01_R1.fastq.gz\tS01_R2.fastq.gz" >> samples.txt
 echo -e "S02\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
 echo -e "S03\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
 
-INFO "Call snakefile with group list"
+INFO "Call snakefile with no group list in reference mode"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           --config references_txt='references.txt' -np
 
