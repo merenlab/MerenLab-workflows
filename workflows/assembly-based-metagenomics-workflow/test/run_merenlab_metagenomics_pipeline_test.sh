@@ -37,17 +37,17 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 INFO "create samples.txt"
 echo -e "sample\tgroup\tr1\tr2" > samples.txt
-echo -e "S01\tMYref1\tS01_R1.fastq.gz\tS01_R2.fastq.gz" >> samples.txt
-echo -e "S02\totherREF\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
-echo -e "S03\totherREF\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
+echo -e "S01\tG01\tthree_samples_example/S01_R1.fastq.gz\tthree_samples_example/S01_R2.fastq.gz" >> samples.txt
+echo -e "S02\tG02\tthree_samples_example/S02_R1.fastq.gz\tthree_samples_example/S02_R2.fastq.gz" >> samples.txt
+echo -e "S03\tG02\tthree_samples_example/S03_R1.fastq.gz\tthree_samples_example/S03_R2.fastq.gz" >> samples.txt
 
 INFO "decompress mock reference files"
 gzip -d G*.fa.gz 
 
 INFO "Create a references.txt file"
 echo -e "reference\tpath" > references.txt
-echo -e "MYref1\tG01-contigs.fa" >> references.txt
-echo -e "otherREF\tG02-contigs.fa" >> references.txt
+echo -e "G01\tthree_samples_example/G01-contigs.fa" >> references.txt
+echo -e "G02\tthree_samples_example/G02-contigs.fa" >> references.txt
 
 INFO "Creating fake reference fasta files"
 touch XX1.fa
@@ -71,9 +71,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 INFO "create samples.txt with no group column"
 echo -e "sample\tr1\tr2" > samples.txt
-echo -e "S01\tS01_R1.fastq.gz\tS01_R2.fastq.gz" >> samples.txt
-echo -e "S02\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
-echo -e "S03\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
+echo -e "S01\tthree_samples_example/S01_R1.fastq.gz\tthree_samples_example/S01_R2.fastq.gz" >> samples.txt
+echo -e "S02\tthree_samples_example/S02_R1.fastq.gz\tthree_samples_example/S02_R2.fastq.gz" >> samples.txt
+echo -e "S03\tthree_samples_example/S03_R1.fastq.gz\tthree_samples_example/S03_R2.fastq.gz" >> samples.txt
 
 INFO "Call snakefile with no group list in reference mode"
 INFO "This one shouldn't do anything and just say 'Nothing to be done.'"
