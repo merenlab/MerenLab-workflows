@@ -187,6 +187,7 @@ if A('all_against_all', config) :
 if not os.path.isfile(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"):
     # only create the file if it doesn't always exist.
     # if we create the file every time, then it snakemake would run from the begininnig every time
+    os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
     samples_information.to_csv(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt", sep='\t', columns=['sample','r1','r2'],index=False)
 
 
