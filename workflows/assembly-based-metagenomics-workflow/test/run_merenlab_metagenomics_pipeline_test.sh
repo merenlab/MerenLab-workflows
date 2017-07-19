@@ -42,7 +42,7 @@ echo -e "S02\tG02\tthree_samples_example/S02_R1.fastq.gz\tthree_samples_example/
 echo -e "S03\tG02\tthree_samples_example/S03_R1.fastq.gz\tthree_samples_example/S03_R2.fastq.gz" >> samples.txt
 
 INFO "decompress mock reference files"
-gzip -d G*.fa.gz 
+gzip -d three_samples_example/*.fa.gz 
 
 INFO "Create a references.txt file"
 echo -e "reference\tpath" > references.txt
