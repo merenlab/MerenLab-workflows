@@ -52,15 +52,17 @@ touch XX2.fa
 
 INFO "Call snakefile with group list"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          -np \
-          --config references_txt='references.txt'
+          $cmd \
+          --config references_txt='references.txt' \
+          output_dirs='{"MERGE_DIR": "06_MERGED_REFERENCE_MODE"}'
 
 
 INFO "Call snakefile with group list with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          -np \
+          $cmd \
           --config references_txt='references.txt'\
-          all_against_all=True
+          all_against_all=True \
+          output_dirs='{"MERGE_DIR": "06_MERGED_REFERENCE_MODE_all_against_all"}'
 
 
 
@@ -71,8 +73,11 @@ echo -e "S02\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
 echo -e "S03\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
 
 INFO "Call snakefile with no group list in reference mode"
+INFO "This one shouldn't do anything and just say 'Nothing to be done.'"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
-          --config references_txt='references.txt' -np
+          $cmd \
+          --config references_txt='references.txt' \
+          output_dirs='{"MERGE_DIR": "06_MERGED_REFERENCE_MODE_all_against_all"}'
 
 INFO "clear all files"
 rm *.snakefile config.json samples.txt
