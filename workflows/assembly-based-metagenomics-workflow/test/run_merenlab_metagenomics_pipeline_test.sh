@@ -31,7 +31,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 INFO "Call snakefile with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
-          --config all_against_all=True
+          --config all_against_all=True \
           output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL"}'
 
 
