@@ -41,10 +41,13 @@ echo -e "S01\tMYref1\tS01_R1.fastq.gz\tS01_R2.fastq.gz" >> samples.txt
 echo -e "S02\totherREF\tS02_R1.fastq.gz\tS02_R2.fastq.gz" >> samples.txt
 echo -e "S03\totherREF\tS03_R1.fastq.gz\tS03_R2.fastq.gz" >> samples.txt
 
+INFO "decompress mock reference files"
+gzip -d G*.fa.gz 
+
 INFO "Create a references.txt file"
 echo -e "reference\tpath" > references.txt
-echo -e "MYref1\tXX1.fa" >> references.txt
-echo -e "otherREF\tXX2.fa" >> references.txt
+echo -e "MYref1\tG01-contigs.fa" >> references.txt
+echo -e "otherREF\tG02-contigs.fa" >> references.txt
 
 INFO "Creating fake reference fasta files"
 touch XX1.fa
@@ -79,9 +82,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           --config references_txt='references.txt' \
           output_dirs='{"MERGE_DIR": "06_MERGED_REFERENCE_MODE_all_against_all"}'
 
-INFO "clear all files"
-rm *.snakefile config.json samples.txt
-rm -rf 00_LOGS 01_QC
 
 # go back to the directory where we started
 cd -
+
+INFO "clear all files"
+rm -rf $output_dir
