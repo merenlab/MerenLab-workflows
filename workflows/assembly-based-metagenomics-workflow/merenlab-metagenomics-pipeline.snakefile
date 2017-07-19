@@ -130,10 +130,6 @@ if run_taxonomy_with_centrifuge:
                           "provide a path for the centrifuge db in the "\
                           "config file. See documentation for more details.")
 
-#If it doesn't already exist then create a 00_LOGS folder
-os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
-os.makedirs(dirs_dict["QC_DIR"], exist_ok=True)
-
 
 # loading the samples.txt file
 # The default samples file is samples.txt
