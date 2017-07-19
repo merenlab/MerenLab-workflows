@@ -15,9 +15,9 @@ if [ $# -eq 2 ]; then
 fi
 # copy latest script here
 cp ../merenlab-metagenomics-pipeline.snakefile $output_dir
-cp -R ../wrappers/ $output_dir
+cp -R ../wrappers/ $output_dir/wrappers/
 cp ../mock_files_for_merenlab_metagenomics_pipeline/*json $output_dir
-cp -R ../mock_files_for_merenlab_metagenomics_pipeline/three_samples_example/ $output_dir
+cp -R ../mock_files_for_merenlab_metagenomics_pipeline/three_samples_example/ $output_dir/three_samples_example/
 cp ../mock_files_for_merenlab_metagenomics_pipeline/samples.txt $output_dir
 cp ../mock_files_for_merenlab_metagenomics_pipeline/samples-no-groups.txt $output_dir
 
