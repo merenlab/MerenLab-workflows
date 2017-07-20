@@ -81,6 +81,32 @@ An updated DAG for the workflow for our mock data is available below:
 
 A little more of a mess! But also has a beauty to it :-).
 
+### Define the number of threads per rule in a cluster
+
+In order to change the number of threads per rule when running on a cluster, the following structure should be used: 
+
+```
+	"rule_name":
+		"threads": number_of_threads
+```
+
+The following defaults have been set:
+
+**rule**|**threads**
+:-----:|:-----:
+qc|4
+megahit|11
+gen\_contigs\_db|5
+run\_centrifuge|5
+run\_anvi\_run\_hmms|20
+bowtie\_build|4
+bowtie|10
+samtools\_view|4
+anvi\_init\_bam|4
+anvi\_profile|5
+
+All other rules use 1 thread by default.
+
 ### Optional steps
 
 The following steps are only optional:
@@ -107,9 +133,9 @@ Notice that everything has to have quotation marks (to be compatible with the JS
 
 The following parameters are available:
 
-`memory_portion_usage_for_assembly` (see `-m/--memory` in the megahit documentation) - The default is 0.4.
+`memory` (see `-m/--memory` in the megahit documentation) - The default is 0.4.
 
-`MIN_CONTIG_LENGTH_FOR_ASSEMBLY` (`--min-contig-len`) - default is 1,000.
+`min_contig_len` (`--min-contig-len`) - default is 1,000.
 
 ### `run_centrifuge`
 
@@ -123,7 +149,7 @@ The following parameters are available:
 
 ### `anvi_profile`
 
-`MIN_CONTIG_SIZE_FOR_PROFILE_DB` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
+`min_contig_length` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
 
 ### example
 
@@ -139,10 +165,11 @@ So let's say I want to run centrifuge, I don't want to run hmms, and I want my m
 		"run": false
 	},
 	"anvi_profile:{
-		"MIN_CONTIG_SIZE_FOR_PROFILE_DB": 3000
+		"min_contig_length": 3000,
+		"threads": 10
 	},
 	"megahit":{
-		"MIN_CONTIG_LENGTH_FOR_ASSEMBLY": 500
+		"min_contig_len": 500
 	}
 }
 ```

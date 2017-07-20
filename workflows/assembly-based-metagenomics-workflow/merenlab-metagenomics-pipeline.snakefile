@@ -16,9 +16,9 @@
     {
         "samples_txt": "samples.txt",
         "remove_human_contamination": "no",
-        "memory_portion_usage_for_assembly": "0.4",
-        "MIN_CONTIG_LENGTH_FOR_ASSEMBLY": "1000",
-        "MIN_CONTIG_SIZE_FOR_PROFILE_DB": "2500",
+        "memory": "0.4",
+        "min_contig_len": "1000",
+        "min_contig_length": "2500",
         "CLUSTER_CONTIGS": "--cluster-contigs"
     }
 
@@ -106,6 +106,8 @@ def A(_list, d, default_value = ""):
             return default_value
     return d
 
+# a helper function to get the user defined number of threads for a rule
+def T(rule_name, N=1): return A([rule_name,'threads'], config, default_value=N)
 
 for d in A("output_dirs", config):
     # renaming folders according to the config file, if the user specified.
@@ -196,6 +198,7 @@ rule all:
 rule gen_input_for_gen_configs:
     log: dirs_dict["LOGS_DIR"] + "/gen_input_for_gen_configs"
     output: dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"
+    threads: T('gen_input_for_gen_configs')
     run:
         samples_information.to_csv(output, sep='\t', columns=['sample','r1','r2'],index=False)
 
@@ -212,6 +215,7 @@ rule gen_configs:
     input: ancient(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt")
     output: temp(expand("{DIR}/{sample}.ini", DIR=dirs_dict["QC_DIR"], sample=sample_names))
     params: dir=dirs_dict["QC_DIR"]
+    threads: T('gen_configs')
     shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
 
 
@@ -225,7 +229,7 @@ rule qc:
     output:
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq"
-    threads: 4
+    threads: T('qc', 4)
     shell: "iu-filter-quality-minoche {input} --ignore-deflines &>> {log}"
 
 
@@ -235,6 +239,7 @@ rule gzip_fastas:
     log: dirs_dict["LOGS_DIR"] + "/{sample}-{R}-gzip.log"
     input: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq"
     output: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
+    threads: T('gzip_fastas')
     shell: "gzip {input} &>> {log}"
 
 
@@ -266,21 +271,21 @@ rule megahit:
     input: unpack(input_for_megahit)
     params:
         # the minimum length for contig (smaller contigs will be discarded)
-        MIN_CONTIG_LENGTH_FOR_ASSEMBLY = int(A(["megahit", "MIN_CONTIG_LENGTH_FOR_ASSEMBLY"], config, default_value="1000")),
+        min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
         # portion of total memory to use by megahit
-        memory_portion_usage_for_assembly = float(A(["megahit", "memory_portion_usage_for_assembly"], config, default_value=0.4))
+        memory = float(A(["megahit", "memory"], config, default_value=0.4))
     # output folder for megahit is temporary (using the snakemake temp())
     # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
     # the files that were created stay there.
     output: temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP")
-    threads: 11
+    threads: T('megahit', 11)
     run:
         r1 = ','.join(input.r1)
         r2 = ','.join(input.r2)
 
         cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
-            " --min-contig-len {params.MIN_CONTIG_LENGTH_FOR_ASSEMBLY}" + \
-            " -m {params.memory_portion_usage_for_assembly}" + \
+            " --min-contig-len {params.min_contig_len}" + \
+            " -m {params.memory}" + \
             " -o {output}" + \
             " -t {threads}" + \
             " &>> {log}"
@@ -303,6 +308,7 @@ rule touch_megahit_output:
         dir = dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"
     output:
         contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
+    threads: T('touch_megahit_output')
     shell:
         "mv {input.dir}/final.contigs.fa {output.contigs}"
 
@@ -338,6 +344,7 @@ rule reformat_fasta:
         contig = protected(dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"),
         report = dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-reformat-report.txt"
     params: prefix = "{group}"
+    threads: T('reformat_fasta')
     wrapper:
         # Notice that path to wrapper is relative to the workdir (if you
         # want an absolute path, use 'file://' instead of 'file:')
@@ -352,6 +359,7 @@ if run_remove_human_dna_using_centrifuge:
         log: dirs_dict["LOGS_DIR"] + "/{group}-remove-human-dna-using-centrifuge.log"
         input: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"
         output: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs-filtered.fa"
+        threads: T('remove_human_dna_using_centrifuge')
         shell: "touch {output} &>> {log}"
 
 
@@ -367,7 +375,7 @@ rule gen_contigs_db:
     output:
         db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
-    threads: 5
+    threads: T('gen_contigs_db', 5)
     shell: "anvi-gen-contigs-database -f {input} -o {output.db} &>> {log}"
 
 
@@ -382,6 +390,7 @@ if run_taxonomy_with_centrifuge:
         input: ancient(rules.gen_contigs_db.output.db)
         # output is temporary. No need to keep this file.
         output: temp(dirs_dict["CONTIGS_DIR"] + "/{group}-gene-calls.fa")
+        threads: T('run_taxonomy_with_centrifuge')
         shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &>> {log}"
 
 
@@ -394,7 +403,7 @@ if run_taxonomy_with_centrifuge:
             hits = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_hits.tsv",
             report = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_report.tsv"
         params: db=config['centrifuge']['db']
-        threads: 5
+        threads: T('run_centrifuge', 5)
         shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} &>> {log}"
 
 
@@ -412,6 +421,7 @@ if run_taxonomy_with_centrifuge:
         # http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#flag-files
         output: touch(dirs_dict["CONTIGS_DIR"] + "/{group}-anvi_import_taxonomy.done")
         params: parser = "centrifuge"
+        threads: T('import_taxonomy')
         shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &>> {log}"
 
 
@@ -430,7 +440,7 @@ if run_anvi_run_hmms:
         # using a snakemake flag file as an output since no file is generated
         # by the rule.
         output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
-        threads: 20
+        threads: T('run_anvi_run_hmms', 20)
         shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
 
 
@@ -446,7 +456,7 @@ rule bowtie_build:
         o2 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.rev.{i}.bt2', i=[1,2], group="{group}")
     params:
         prefix = dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs"
-    threads: 4
+    threads: T('bowtie_build', 4)
     shell: "bowtie2-build {input} {params.prefix} &>> {log}"
 
 
@@ -463,7 +473,7 @@ rule bowtie:
     params:
         dir = dirs_dict["MAPPING_DIR"] + "/{sample}",
         bowtie_build_prefix = rules.bowtie_build.params.prefix
-    threads: 10
+    threads: T('bowtie', 10)
     shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
 
 
@@ -474,7 +484,7 @@ rule samtools_view:
     input: rules.bowtie.output
     # output as temp. we only keep the final bam file
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
-    threads: 4
+    threads: T('samtools_view', 4)
     shell: "samtools view -F 4 -bS {input} -o {output} &>> {log}"
 
 
@@ -489,7 +499,7 @@ rule anvi_init_bam:
     output:
         bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
         bai = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam.bai"
-    threads: 4
+    threads: T('anvi_init_bam', 4)
     shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
 
 
@@ -510,15 +520,15 @@ rule anvi_profile:
     params:
         # minimal length of contig to include in the profiling
         # if not specified in the config file then default is 2,500.
-        MIN_CONTIG_SIZE_FOR_PROFILE_DB = A(["anvi_profile", "MIN_CONTIG_SIZE_FOR_PROFILE_DB"], config, default_value=2500),
+        min_contig_length = A(["anvi_profile", "min_contig_length"], config, default_value=2500),
         # if profiling to individual assembly then clustering contigs
         # see --cluster-contigs in the help manu of anvi-profile
         cluster_contigs = lambda wildcards: '--cluster-contigs' if group_sizes[wildcards.group] == 1 else '',
         name = "{sample}",
         profile_AA = "--profile-AA-frequencies" if A(["anvi_profile", "profile_AA"], config)  else "",
         output_dir = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}"
-    threads: 5
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.MIN_CONTIG_SIZE_FOR_PROFILE_DB} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
+    threads: T('anvi_profile', 5)
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.min_contig_length} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
 
 
 def input_for_anvi_merge(wildcards):
@@ -603,7 +613,7 @@ rule anvi_merge:
         profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
         aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5",
         runlog = dirs_dict["MERGE_DIR"] + "/{group}/RUNLOG.txt"
-    threads: 1
+    threads: T('anvi_merge')
     params:
         output_dir = dirs_dict["MERGE_DIR"] + "/{group}",
         name = "{group}",

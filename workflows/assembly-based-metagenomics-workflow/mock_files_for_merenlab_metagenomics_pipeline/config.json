@@ -19,7 +19,8 @@
     },
     "anvi_profile":{
         "MIN_CONTIG_SIZE_FOR_PROFILE_DB": 2500,
-        "profile_AA": true
+        "profile_AA": true,
+        "threads": 5
     },
     "centrifuge":{
         "run": true,
