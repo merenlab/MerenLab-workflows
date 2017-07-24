@@ -117,7 +117,7 @@ for d in A("output_dirs", config):
                           "config file, but the only available folders are: "\
                           "%s" % (d, dir_list))
 
-        dirs_dict[d] = A(d,config["output_dirs"])
+    dirs_dict[d] = A(d,config["output_dirs"])
 
 # setting configuration for optional steps
 run_remove_human_dna_using_centrifuge = A(["remove_human_dna_using_centrifuge", "run"], config)
