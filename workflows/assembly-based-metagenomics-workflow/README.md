@@ -38,6 +38,16 @@ An example for a properly formatted `.txt` file is available [here](mock_files_f
 If you prefer a different name for your samples text file, then you can provide a different name in the config file (see below).
 If nothing was provided in the config file then the default is `samples.txt`.
 
+## Running on a cluster
+
+When submitting to a cluster, you can utilize the [snakemake cluster execution](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution). Notice that the number of threads per rule could be changed using the `config.json` file (and not by using the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file). For more details, refer to the documentation of the configuration file below.
+
+When submitting a workflow to a cluster, snakemake requires you to limit the number of jobs using `--jobs`. If you prefer to limit the number of threads that would be used by your workflow (for example, if you share your cluster with others and you don't want to take control of all threads), then we made use of the snakemake built-in `resources`. You can set the number of jobs to your limit (or to a very big number like this one: 99834 if you dont care), and use `--resources nodes=30`, if you wish to only use 30 threads. We used the word `nodes` so that to not confuse with the reserved word `threads` in snakemake.
+
+### A note on cluster-config
+
+This note is here mainly for documentation of the code, and for those of you who are interested in snakemake. The reason we decided not to use the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file to control the number of threads per rule, is becuase certain software require the number of threads as an input (for example `megahit` and `anvi-profile`), but the cluster config file is not available for shell commands within snakemake rules. To bypass this issue we simply put the threads configuration in the `config.json`, thus available for the user to modify.
+
 ## The config file
 
 To make changes easy and accessible for the user, we tried our best to make all relevant configurations available

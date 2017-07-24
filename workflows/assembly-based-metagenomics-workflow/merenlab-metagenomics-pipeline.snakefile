@@ -199,6 +199,7 @@ rule gen_input_for_gen_configs:
     log: dirs_dict["LOGS_DIR"] + "/gen_input_for_gen_configs"
     output: dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"
     threads: T('gen_input_for_gen_configs')
+    resources: nodes = T('gen_input_for_gen_configs'),
     run:
         samples_information.to_csv(output, sep='\t', columns=['sample','r1','r2'],index=False)
 
@@ -216,6 +217,7 @@ rule gen_configs:
     output: temp(expand("{DIR}/{sample}.ini", DIR=dirs_dict["QC_DIR"], sample=sample_names))
     params: dir=dirs_dict["QC_DIR"]
     threads: T('gen_configs')
+    resources: nodes = T('gen_configs'),
     shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
 
 
@@ -230,6 +232,7 @@ rule qc:
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq"
     threads: T('qc', 4)
+    resources: nodes = T('qc', 4),
     shell: "iu-filter-quality-minoche {input} --ignore-deflines &>> {log}"
 
 
@@ -240,6 +243,7 @@ rule gzip_fastas:
     input: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq"
     output: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
     threads: T('gzip_fastas')
+    resources: nodes = T('gzip_fastas'),
     shell: "gzip {input} &>> {log}"
 
 
@@ -279,6 +283,7 @@ rule megahit:
     # the files that were created stay there.
     output: temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP")
     threads: T('megahit', 11)
+    resources: nodes = T('megahit', 11),
     run:
         r1 = ','.join(input.r1)
         r2 = ','.join(input.r2)
@@ -309,6 +314,7 @@ rule touch_megahit_output:
     output:
         contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
     threads: T('touch_megahit_output')
+    resources: nodes = T('touch_megahit_output'),
     shell:
         "mv {input.dir}/final.contigs.fa {output.contigs}"
 
@@ -345,6 +351,7 @@ rule reformat_fasta:
         report = dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-reformat-report.txt"
     params: prefix = "{group}"
     threads: T('reformat_fasta')
+    resources: nodes = T('reformat_fasta'),
     wrapper:
         # Notice that path to wrapper is relative to the workdir (if you
         # want an absolute path, use 'file://' instead of 'file:')
@@ -360,6 +367,7 @@ if run_remove_human_dna_using_centrifuge:
         input: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"
         output: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs-filtered.fa"
         threads: T('remove_human_dna_using_centrifuge')
+        resources: nodes = T('remove_human_dna_using_centrifuge'),
         shell: "touch {output} &>> {log}"
 
 
@@ -376,6 +384,7 @@ rule gen_contigs_db:
         db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
     threads: T('gen_contigs_db', 5)
+    resources: nodes = T('gen_contigs_db', 5),
     shell: "anvi-gen-contigs-database -f {input} -o {output.db} &>> {log}"
 
 
@@ -391,6 +400,7 @@ if run_taxonomy_with_centrifuge:
         # output is temporary. No need to keep this file.
         output: temp(dirs_dict["CONTIGS_DIR"] + "/{group}-gene-calls.fa")
         threads: T('run_taxonomy_with_centrifuge')
+        resources: nodes = T('run_taxonomy_with_centrifuge'),
         shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &>> {log}"
 
 
@@ -404,6 +414,7 @@ if run_taxonomy_with_centrifuge:
             report = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_report.tsv"
         params: db=config['centrifuge']['db']
         threads: T('run_centrifuge', 5)
+        resources: nodes = T('run_centrifuge', 5),
         shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} &>> {log}"
 
 
@@ -422,6 +433,7 @@ if run_taxonomy_with_centrifuge:
         output: touch(dirs_dict["CONTIGS_DIR"] + "/{group}-anvi_import_taxonomy.done")
         params: parser = "centrifuge"
         threads: T('import_taxonomy')
+        resources: nodes = T('import_taxonomy'),
         shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &>> {log}"
 
 
@@ -441,6 +453,7 @@ if run_anvi_run_hmms:
         # by the rule.
         output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
         threads: T('run_anvi_run_hmms', 20)
+        resources: nodes = T('run_anvi_run_hmms', 20),
         shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
 
 
@@ -457,6 +470,7 @@ rule bowtie_build:
     params:
         prefix = dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs"
     threads: T('bowtie_build', 4)
+    resources: nodes = T('bowtie_build', 4),
     shell: "bowtie2-build {input} {params.prefix} &>> {log}"
 
 
@@ -474,6 +488,7 @@ rule bowtie:
         dir = dirs_dict["MAPPING_DIR"] + "/{sample}",
         bowtie_build_prefix = rules.bowtie_build.params.prefix
     threads: T('bowtie', 10)
+    resources: nodes = T('bowtie', 10),
     shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
 
 
@@ -485,6 +500,7 @@ rule samtools_view:
     # output as temp. we only keep the final bam file
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: T('samtools_view', 4)
+    resources: nodes = T('samtools_view', 4),
     shell: "samtools view -F 4 -bS {input} -o {output} &>> {log}"
 
 
@@ -500,6 +516,7 @@ rule anvi_init_bam:
         bam = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam",
         bai = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam.bai"
     threads: T('anvi_init_bam', 4)
+    resources: nodes = T('anvi_init_bam', 4),
     shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
 
 
@@ -528,6 +545,7 @@ rule anvi_profile:
         profile_AA = "--profile-AA-frequencies" if A(["anvi_profile", "profile_AA"], config)  else "",
         output_dir = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}"
     threads: T('anvi_profile', 5)
+    resources: nodes = T('anvi_profile', 5),
     shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.min_contig_length} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
 
 
@@ -614,6 +632,7 @@ rule anvi_merge:
         aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5",
         runlog = dirs_dict["MERGE_DIR"] + "/{group}/RUNLOG.txt"
     threads: T('anvi_merge')
+    resources: nodes = T('anvi_merge'),
     params:
         output_dir = dirs_dict["MERGE_DIR"] + "/{group}",
         name = "{group}",
