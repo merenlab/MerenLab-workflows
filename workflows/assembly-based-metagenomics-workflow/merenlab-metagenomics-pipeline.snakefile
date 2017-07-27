@@ -95,8 +95,8 @@ def A(_list, d, default_value = ""):
         For example if x = ['a','b','c'] then this function checkes if the
         value y['a']['b']['c'] exists, if it does then it is returned
     '''
-    # converting to list for the cases of only one item
     if type(_list) is not list:
+        # converting to list for the cases of only one item
         _list = [_list]
     while _list:
         a = _list.pop(0)
@@ -150,6 +150,9 @@ if 'references_txt' in config:
     references_txt_file = config["references_txt"]
     references_information = pd.read_csv(references_txt_file, sep='\t', index_col=0).to_dict(orient='index')
     group_names = list(references_information.keys())
+    # in reference mode, unless specified by the user, then the name of 
+    # the directory with the formatted reference fasta will be 02_REFERENCE_FASTA
+    dirs_dict['ASSEMBLY_DIR'] = A(['output_dirs', 'ASSEMBLY_DIR'], config, default_value="02_REFERENCE_FASTA")
 
 # Collecting information regarding groups.
 if "group" in samples_information.columns:

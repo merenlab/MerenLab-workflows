@@ -59,7 +59,7 @@ config file go [here](mock_files_for_merenlab_metagenomics_pipeline/config.json)
 ### Output directories
 
 The following directories are expected to exist at the end of the workflow:
-"00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"
+"00\_LOGS", "01\_QC", "02\_ASSEMBLY", "03\_CONTIGS", "04\_MAPPING", "05\_ANVIO_PROFILE", "06\_MERGED"
 
 Don't like these names? You can specify what is the name of the folder, by providing the following information in the config file:
 
@@ -67,8 +67,19 @@ Don't like these names? You can specify what is the name of the folder, by provi
     "output_dirs":{
         "LOGS_DIR" : "00_MY_beAuTiFul_LOGS",
         "QC_DIR" : "BEST_QC_DIR_EVER",
+        "ASSEMBLY_DIR" : "assemblies",
         "CONTIGS_DIR" : "/absolute/path/to/my/contigs/dir",
-        "MAPPING_DIR" : "make/mapping/great/again"
+        "MAPPING_DIR" : "relative/path/to/my/mapping/dir",
+        "PROFILE_DIR": "/I/already/did/my/profiling/and/this/is/where/you/can/find/it/",
+        "MERGE_DIR": "06_Keep_Calm_and_Merge_On"
+    }
+```
+
+When using "references mode" (see below) the default name for the `ASSEMBLY_DIR` is `02_REFERENCE_FASTA` (since in references mode no assembly is performed in the workflow, and the fasta files could be not assemblies, but rather full genomes). In order to change it, you may use `"REFERENCES_DIR"`, i.e.:
+
+```
+    "output_dirs":{
+    	"REFERENCES_DIR" : "02_REF"
     }
 ```
 
