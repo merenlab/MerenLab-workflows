@@ -58,6 +58,7 @@ import pandas as pd
 import anvio.utils as u
 import anvio.dbops as dbops
 import anvio.terminal as terminal
+import anvio.filesnpaths as filesnpaths
 
 from anvio.errors import ConfigError
 
@@ -148,6 +149,8 @@ if 'references_txt' in config:
     # if the user supplied a reference.txt file, then there is no need to
     # create an assembly (see documentation for 'reference-mode')
     references_txt_file = config["references_txt"]
+    # make sure this file exists
+    filesnpaths.is_file_exists(references_txt_file)
     references_information = pd.read_csv(references_txt_file, sep='\t', index_col=0).to_dict(orient='index')
     group_names = list(references_information.keys())
     # in reference mode, unless specified by the user, then the name of 
