@@ -115,7 +115,7 @@ The following defaults have been set:
 
 **rule**|**threads**
 :-----:|:-----:
-qc|4
+qc|2
 megahit|11
 gen\_contigs\_db|5
 run\_centrifuge|5
