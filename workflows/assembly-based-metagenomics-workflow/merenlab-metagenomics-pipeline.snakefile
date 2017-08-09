@@ -81,10 +81,8 @@ dir_list = ["LOGS_DIR", "QC_DIR", "ASSEMBLY_DIR", "CONTIGS_DIR", "MAPPING_DIR", 
 dir_names = ["00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"]
 dirs_dict = dict(zip(dir_list, dir_names))
 
-
-
-
-
+# create log dir if it doesn't exist
+os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
 
 def A(_list, d, default_value = ""):
     '''
