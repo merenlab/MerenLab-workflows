@@ -586,11 +586,9 @@ def remove_empty_profile_databases(profiles, group):
         n = next(iter(db.meta['total_reads_mapped'].values()))
         if n == 0:
             # this profile is empty so we can't include it in the merged profile.
-            profiles.remove(p)
             empty_profiles.append(p)
+    profiles = list(set(profiles) - set(empty_profiles))
     progress.end()
-
-    return profiles
 
     if not profiles:
         # if there are no profiles to merge then notify the user
@@ -601,7 +599,9 @@ def remove_empty_profile_databases(profiles, group):
     run.info('Number of non-empty profile databases', len(profiles))
     run.info('Number of empty profile databases', len(empty_profiles))
     if len(empty_profiles) > 0:
-        run.info('The following databases are empty: %s' % empty_profiles,)
+        run.info('The following databases are empty: ', empty_profiles)
+
+    return profiles
 
 
 rule anvi_merge:
