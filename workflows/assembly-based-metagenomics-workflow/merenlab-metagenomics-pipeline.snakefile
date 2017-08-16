@@ -199,15 +199,6 @@ rule all:
     input: expand("{DIR}/{group}/PROFILE.db", DIR=dirs_dict["MERGE_DIR"], group=group_names)
 
 
-rule gen_input_for_gen_configs:
-    log: dirs_dict["LOGS_DIR"] + "/gen_input_for_gen_configs"
-    output: dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt"
-    threads: T('gen_input_for_gen_configs')
-    resources: nodes = T('gen_input_for_gen_configs'),
-    run:
-        samples_information.to_csv(output, sep='\t', columns=['sample','r1','r2'],index=False)
-
-
 rule gen_configs:
     '''
         Generating a config file for each sample. Notice that this step
@@ -217,7 +208,7 @@ rule gen_configs:
     log: dirs_dict["LOGS_DIR"] + "/gen_configs.log"
     # the input file is marked as 'ancient' so snakemake wouldn't run it
     # just because a new path-to-raw-fastq-files.txt file was created.
-    input: ancient(dirs_dict["QC_DIR"] + "/path-to-raw-fastq-files.txt")
+    input: ancient(samples_txt_file)
     output: temp(expand("{DIR}/{sample}.ini", DIR=dirs_dict["QC_DIR"], sample=sample_names))
     params: dir=dirs_dict["QC_DIR"]
     threads: T('gen_configs')
