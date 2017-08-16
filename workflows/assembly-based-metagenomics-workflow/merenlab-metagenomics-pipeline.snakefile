@@ -48,7 +48,7 @@
     love to learn about an alternative solution if you have one.
 
     Note on log files: in order for the stdout and stderr to be written
-    into log files, I have added `&>> {log}` to each shell command. if
+    into log files, I have added `>> {log} 2>&1` to each shell command. if
     running on a cluster, I suggested including something like this in
     your `--cluster` command: `--log {log}`.
 '''
@@ -213,7 +213,7 @@ rule gen_configs:
     params: dir=dirs_dict["QC_DIR"]
     threads: T('gen_configs')
     resources: nodes = T('gen_configs'),
-    shell: "iu-gen-configs {input} -o {params.dir} &>> {log}"
+    shell: "iu-gen-configs {input} -o {params.dir} >> {log} 2>&1"
 
 
 rule qc:
@@ -230,7 +230,7 @@ rule qc:
         read_ids = temp(dirs_dict["QC_DIR"] + "/{sample}-READ_IDs.cPickle.z")
     threads: T('qc', 2)
     resources: nodes = T('qc', 2),
-    shell: "iu-filter-quality-minoche {input} --ignore-deflines &>> {log}"
+    shell: "iu-filter-quality-minoche {input} --ignore-deflines >> {log} 2>&1"
 
 
 rule gzip_fastas:
@@ -241,7 +241,7 @@ rule gzip_fastas:
     output: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
     threads: T('gzip_fastas')
     resources: nodes = T('gzip_fastas'),
-    shell: "gzip {input} &>> {log}"
+    shell: "gzip {input} >> {log} 2>&1"
 
 
 def input_for_megahit(wildcards):
@@ -290,7 +290,7 @@ rule megahit:
             " -m {params.memory}" + \
             " -o {output}" + \
             " -t {threads}" + \
-            " &>> {log}"
+            " >> {log} 2>&1"
         print("Running: %s" % cmd)
         shell(cmd)
 
@@ -365,7 +365,7 @@ if run_remove_human_dna_using_centrifuge:
         output: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs-filtered.fa"
         threads: T('remove_human_dna_using_centrifuge')
         resources: nodes = T('remove_human_dna_using_centrifuge'),
-        shell: "touch {output} &>> {log}"
+        shell: "touch {output} >> {log} 2>&1"
 
 
 rule gen_contigs_db:
@@ -382,7 +382,7 @@ rule gen_contigs_db:
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
     threads: T('gen_contigs_db', 5)
     resources: nodes = T('gen_contigs_db', 5),
-    shell: "anvi-gen-contigs-database -f {input} -o {output.db} &>> {log}"
+    shell: "anvi-gen-contigs-database -f {input} -o {output.db} >> {log} 2>&1"
 
 
 if run_taxonomy_with_centrifuge:
@@ -398,7 +398,7 @@ if run_taxonomy_with_centrifuge:
         output: temp(dirs_dict["CONTIGS_DIR"] + "/{group}-gene-calls.fa")
         threads: T('run_taxonomy_with_centrifuge')
         resources: nodes = T('run_taxonomy_with_centrifuge'),
-        shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} &>> {log}"
+        shell: "anvi-get-dna-sequences-for-gene-calls -c {input} -o {output} >> {log} 2>&1"
 
 
     rule run_centrifuge:
@@ -412,7 +412,7 @@ if run_taxonomy_with_centrifuge:
         params: db=config['centrifuge']['db']
         threads: T('run_centrifuge', 5)
         resources: nodes = T('run_centrifuge', 5),
-        shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} &>> {log}"
+        shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} >> {log} 2>&1"
 
 
     rule import_taxonomy:
@@ -431,7 +431,7 @@ if run_taxonomy_with_centrifuge:
         params: parser = "centrifuge"
         threads: T('import_taxonomy')
         resources: nodes = T('import_taxonomy'),
-        shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} &>> {log}"
+        shell: "anvi-import-taxonomy -c {input.contigs} -i {input.report} {input.hits} -p {params.parser} >> {log} 2>&1"
 
 
 if run_anvi_run_hmms:
@@ -451,7 +451,7 @@ if run_anvi_run_hmms:
         output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
         threads: T('run_anvi_run_hmms', 20)
         resources: nodes = T('run_anvi_run_hmms', 20),
-        shell: "anvi-run-hmms -c {input} -T {threads} &>> {log}"
+        shell: "anvi-run-hmms -c {input} -T {threads} >> {log} 2>&1"
 
 
 rule bowtie_build:
@@ -468,7 +468,7 @@ rule bowtie_build:
         prefix = dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs"
     threads: T('bowtie_build', 4)
     resources: nodes = T('bowtie_build', 4),
-    shell: "bowtie2-build {input} {params.prefix} &>> {log}"
+    shell: "bowtie2-build {input} {params.prefix} >> {log} 2>&1"
 
 
 rule bowtie:
@@ -486,7 +486,7 @@ rule bowtie:
         bowtie_build_prefix = rules.bowtie_build.params.prefix
     threads: T('bowtie', 10)
     resources: nodes = T('bowtie', 10),
-    shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} --no-unal -S {output} &>> {log}"
+    shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} --no-unal -S {output} >> {log} 2>&1"
 
 
 rule samtools_view:
@@ -498,7 +498,7 @@ rule samtools_view:
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: T('samtools_view', 4)
     resources: nodes = T('samtools_view', 4),
-    shell: "samtools view -F 4 -bS {input} -o {output} &>> {log}"
+    shell: "samtools view -F 4 -bS {input} -o {output} >> {log} 2>&1"
 
 
 rule anvi_init_bam:
@@ -514,7 +514,7 @@ rule anvi_init_bam:
         bai = dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.bam.bai"
     threads: T('anvi_init_bam', 4)
     resources: nodes = T('anvi_init_bam', 4),
-    shell: "anvi-init-bam {input} -o {output.bam} &>> {log}"
+    shell: "anvi-init-bam {input} -o {output.bam} >> {log} 2>&1"
 
 
 rule anvi_profile:
@@ -543,7 +543,7 @@ rule anvi_profile:
         output_dir = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}"
     threads: T('anvi_profile', 5)
     resources: nodes = T('anvi_profile', 5),
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.min_contig_length} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} &>> {log}"
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.min_contig_length} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} >> {log} 2>&1"
 
 
 def input_for_anvi_merge(wildcards):
@@ -664,7 +664,7 @@ rule anvi_merge:
 
         elif group_sizes[wildcards.group] == 1:
             # for individual assemblies, create a symlink to the profile database
-            #shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} &>> {log}")
+            #shell("ln -s {params.profile_dir}/*/* -t {params.output_dir} >> {log} 2>&1")
             #shell("touch -h {params.profile_dir}/*/*")
 
             # Still waiting to get an answer on this issue:
@@ -687,5 +687,5 @@ rule anvi_merge:
             create_fake_output_files(_message, output)
 
         else:
-            shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations &>> {log}")
+            shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations >> {log} 2>&1")
 
