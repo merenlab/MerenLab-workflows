@@ -183,6 +183,8 @@ if A('all_against_all', config) :
 
 rule all:
     '''
+        The target rule for the workflow.
+
         The final product of the workflow is an anvi'o merged profile directory
         for each group
     '''
@@ -191,8 +193,9 @@ rule all:
 
 rule gen_configs:
     '''
-        Generating a config file for each sample. Notice that this step
-        is ran only once and generates the config files for all samples
+        Generating a config file for each sample.
+
+        Notice that this step is ran only once and generates the config files for all samples
     '''
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/gen_configs.log"
@@ -265,12 +268,7 @@ def input_for_megahit(wildcards):
 rule megahit:
     '''
         Assembling fastq files using megahit.
-        Notice that megahit requires a directory to be specified as
-        output. If the directory already exists then megahit will not
-        run. To avoid this, the output for this rule is defined as the
-        directory (and not the assembly fasta file), because if the
-        fasta file was defined as the output of the rule, then snakemake
-        would automaticaly creates the directory.
+
         All files created by megahit are stored in a temporary folder,
         and only the fasta file is kept for later analysis.
     '''
@@ -282,9 +280,15 @@ rule megahit:
         min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
         # portion of total memory to use by megahit
         memory = float(A(["megahit", "memory"], config, default_value=0.4))
-    # output folder for megahit is temporary (using the snakemake temp())
     # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
     # the files that were created stay there.
+    # Notice that megahit requires a directory to be specified as
+    # output. If the directory already exists then megahit will not
+    # run. To avoid this, the output for this rule is defined as the
+    # directory (and not the assembly fasta file), because if the
+    # fasta file was defined as the output of the rule, then snakemake
+    # would automaticaly create the directory.
+    # output folder for megahit is temporary (using the snakemake temp())
     output: temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP")
     threads: T('megahit', 11)
     resources: nodes = T('megahit', 11),
@@ -379,9 +383,12 @@ def get_fasta(wildcards):
 
 rule reformat_fasta:
     '''
-        Reformating the headers of the contigs fasta files in order to
-        give contigs meaningful names; so that if the group name is
-        'MYSAMPLE01', the contigs would look like this:
+        Reformating the headers of the contigs fasta files.
+        
+        This is required to make sure taht the headers don't contain
+        any charachters that anvi'o doesn't like.It give contigs
+        meaningful names; so that if the group name is 'MYSAMPLE01', the
+        contigs would look like this:
         > MYSAMPLE01_000000000001
         > MYSAMPLE01_000000000002
     '''
@@ -419,7 +426,7 @@ if run_remove_human_dna_using_centrifuge:
 
 
 rule gen_contigs_db:
-    """ Generates a contigs database using anvi-gen-contigs-database """
+    """ Generates a contigs database using anvi-gen-contigs-database"""
     # Setting the version to the same as that of the contigs__version in anvi'o
     version: anvio.__contigs__version__
     log: dirs_dict["LOGS_DIR"] + "/{group}-gen_contigs_db.log"
@@ -466,7 +473,7 @@ if run_taxonomy_with_centrifuge:
 
 
     rule import_taxonomy:
-        ''' Run anvi-import-taxonomy '''
+        ''' Run anvi-import-taxonomy'''
         version: 1.0
         log: dirs_dict["LOGS_DIR"] + "/{group}-import_taxonomy.log"
         input:
@@ -539,7 +546,7 @@ def input_for_bowtie(wildcards):
 
 
 rule bowtie:
-    """ Run mapping with bowtie2,  sort and convert to bam with samtools"""
+    """ Run mapping with bowtie2"""
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-bowtie.log"
     input: unpack(input_for_bowtie)
@@ -566,10 +573,7 @@ rule samtools_view:
 
 
 rule anvi_init_bam:
-    """
-        run anvi-init-bam on RAW bam file to create a bam file ready for
-        anvi-profile.
-    """
+    """ run anvi-init-bam on RAW bam file to create a bam file ready for anvi-profile"""
     version: 1.0 # later we can decide if we want the version to use the version of anvi'o
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-anvi_init_bam.log"
     input: rules.samtools_view.output
@@ -670,8 +674,10 @@ def remove_empty_profile_databases(profiles, group):
 
 rule anvi_merge:
     '''
+        Run create a merged profile database.
+
         If there are multiple profiles mapped to the same contigs database,
-        then merge these profiles. For individual profile, create a symlink
+        then merges these profiles. For individual profile, creates a symlink
         to the profile database. The purpose is to have one folder in
         which for every contigs database there is a profile database (or
         a symlink to a profile database) that could be used together for
