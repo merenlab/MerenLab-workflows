@@ -11,16 +11,7 @@
 
     The following files must exist in the working directory:
     config.json - this file contains essential configuration information for
-    the pipeline. Here is an example of the format of the file:
-
-    {
-        "samples_txt": "samples.txt",
-        "remove_human_contamination": "no",
-        "memory": "0.4",
-        "min_contig_len": "1000",
-        "min_contig_length": "2500",
-        "CLUSTER_CONTIGS": "--cluster-contigs"
-    }
+    the pipeline.
 
     samples.txt -
         TAB-delimited file to describe where samples are. The
@@ -75,7 +66,6 @@ progress = terminal.Progress()
 
 # The config file contains many essential configurations for the workflow
 configfile: "config.json"
-
 # Setting the names of all directories
 dir_list = ["LOGS_DIR", "QC_DIR", "ASSEMBLY_DIR", "CONTIGS_DIR", "MAPPING_DIR", "PROFILE_DIR", "MERGE_DIR"]
 dir_names = ["00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"]
@@ -216,13 +206,27 @@ rule gen_configs:
     shell: "iu-gen-configs {input} -o {params.dir} >> {log} 2>&1"
 
 
+def get_raw_fastq(wildcards):
+    ''' return a dict with the path to the raw fastq files'''
+    r1 = samples_information[samples_information["sample"] == wildcards.sample]['r1']
+    r2 = samples_information[samples_information["sample"] == wildcards.sample]['r2']
+    return {'r1': r1, 'r2': r2}
+
+
+def input_for_qc(wildcards):
+    ''' return a dict with input for qc rule'''
+    d = {'ini': ancient(dirs_dict["QC_DIR"] + "/%s.ini" % wildcards.sample)}
+    d.update(get_raw_fastq(wildcards))
+    return d
+
+
 rule qc:
     ''' Run QC using iu-filter-quality-minoche '''
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{sample}-qc.log"
     # making the config file as "ancient" so QC wouldn't run just because
     # a new config file was produced.
-    input: ancient(dirs_dict["QC_DIR"] + "/{sample}.ini")
+    input: unpack(input_for_qc)
     output:
         r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq",
         r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq",
@@ -230,28 +234,31 @@ rule qc:
         read_ids = temp(dirs_dict["QC_DIR"] + "/{sample}-READ_IDs.cPickle.z")
     threads: T('qc', 2)
     resources: nodes = T('qc', 2),
-    shell: "iu-filter-quality-minoche {input} --ignore-deflines >> {log} 2>&1"
+    shell: "iu-filter-quality-minoche {input.ini} --ignore-deflines >> {log} 2>&1"
 
 
-rule gzip_fastas:
+rule gzip_fastqs:
     ''' Compressing the quality controlled fastq files'''
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{sample}-{R}-gzip.log"
     input: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq"
     output: dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_{R}.fastq.gz"
-    threads: T('gzip_fastas')
-    resources: nodes = T('gzip_fastas'),
+    threads: T('gzip_fastqs')
+    resources: nodes = T('gzip_fastqs'),
     shell: "gzip {input} >> {log} 2>&1"
 
 
 def input_for_megahit(wildcards):
-    '''
-        Creating a dictionary containing the input files for megahit.
-        This could have also been done with a lambda expression, but for
-        easier readability it was done in a function.
-    '''
-    r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
-    r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
+    ''' Creating a dictionary containing the path to input fastq file. '''
+    if A(['qc', 'run'], config, True):
+        # by default, use the output of the qc
+        r1 = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
+        r2 = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
+        
+    else:
+        # if no qc is requested, use raw input
+        r1 = list(samples_information[samples_information["group"] == wildcards.group]['r1'])
+        r2 = list(samples_information[samples_information["group"] == wildcards.group]['r2'])
     return {'r1': r1, 'r2': r2}
 
 
@@ -271,7 +278,7 @@ rule megahit:
     log: dirs_dict["LOGS_DIR"] + "/{group}-megahit.log"
     input: unpack(input_for_megahit)
     params:
-        # the minimum length for contig (smaller contigs will be discarded)
+        # the minimum length for contigs (smaller contigs will be discarded)
         min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
         # portion of total memory to use by megahit
         memory = float(A(["megahit", "memory"], config, default_value=0.4))
@@ -316,16 +323,58 @@ rule touch_megahit_output:
         "mv {input.dir}/final.contigs.fa {output.contigs}"
 
 
-def input_for_reformant_fasta(wildcards):
-    '''define the input for the rule reformat fasta.'''
+def get_raw_fasta(wildcards):
+    '''
+        Define the path to the input fasta files.
 
+        Uses the config details to choose between the raw fasta file,
+        the reformatted, and the output of the host contamination removal.
+        This function also deals with the different cases of "reference mode"
+        Vs. "assembly mode".
+    '''
     if 'references_txt' in config:
         # in 'reference mode' the input is the reference fasta
-        contig = references_information[wildcards.group]['path']
+        contigs = references_information[wildcards.group]['path']
     else:
-        contig = dirs_dict["ASSEMBLY_DIR"] + "/%s/final.contigs.fa" % wildcards.group
+        # by default the input fasta is the assembly output
+        contigs = dirs_dict["ASSEMBLY_DIR"] + "/%s/final.contigs.fa" % wildcards.group
+    return contigs
 
-    return contig
+
+def input_for_run_remove_human_dna_using_centrifuge(wildcards):
+    ''' input fasta for the rule run_remove_human_dna_using_centrifuge'''
+    # The raw fasta will be used if no formatting is needed
+    contigs = get_raw_fasta(wildcards)
+
+    if A(['reformat_fasta','run'], config, True):
+        # by default, reformat fasta is ran
+        contigs = rules.reformat_fasta.output.contigs
+
+    return contigs
+
+
+def get_fasta(wildcards):
+    '''
+        Define the path to the input fasta files.
+
+        The input hierarchy is as follows:
+            output of remove_human_dna_using_centrifuge
+            output of reformat_fasta
+            raw fasta
+        Meaning that if host contamination removal was done then it's 
+        output is the input fasta, elif reformat_fasta was ran then it's
+        output will be used, otherwise the raw fasta will be used.
+    '''
+    # By default (if no host contamination removal is requested)
+    # Then the input will be the same as the one that would have been used
+    # by the rule run_remove_human_dna_using_centrifuge
+    contigs = input_for_run_remove_human_dna_using_centrifuge(wildcards)
+    
+    if run_remove_human_dna_using_centrifuge:
+        # if host contamination removal is used, then use it's output
+        contigs = rules.remove_human_dna_using_centrifuge.output.contigs
+
+    return contigs
 
 
 rule reformat_fasta:
@@ -339,12 +388,12 @@ rule reformat_fasta:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-reformat_fasta.log"
     input:
-        contigs = input_for_reformant_fasta
+        contigs = get_raw_fasta
     output:
-        # write protecting the contig fasta file using protected() because
+        # write protecting the contigs fasta file using protected() because
         # runnig the assembly is probably the most time consuming step and
         # we don't want anyone accidentaly deleting or changing this file.
-        contig = protected(dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"),
+        contigs = protected(dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"),
         report = dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-reformat-report.txt"
     params: prefix = "{group}"
     threads: T('reformat_fasta')
@@ -356,13 +405,14 @@ rule reformat_fasta:
 
 
 if run_remove_human_dna_using_centrifuge:
+
     # These rules will only run if the user asked for removal of Human contamination
     rule remove_human_dna_using_centrifuge:
         """ this is just a placeholder for now """
         version: 1.0
         log: dirs_dict["LOGS_DIR"] + "/{group}-remove-human-dna-using-centrifuge.log"
-        input: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs.fa"
-        output: dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs-filtered.fa"
+        input: input_for_run_remove_human_dna_using_centrifuge
+        output: contigs = dirs_dict["ASSEMBLY_DIR"] + "/{group}/{group}-contigs-filtered.fa"
         threads: T('remove_human_dna_using_centrifuge')
         resources: nodes = T('remove_human_dna_using_centrifuge'),
         shell: "touch {output} >> {log} 2>&1"
@@ -376,7 +426,7 @@ rule gen_contigs_db:
     # depending on whether human contamination using centrifuge was done
     # or not, the input to this rule will be the raw assembly or the
     # filtered.
-    input: rules.remove_human_dna_using_centrifuge.output if run_remove_human_dna_using_centrifuge else rules.reformat_fasta.output.contig
+    input: get_fasta
     output:
         db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
@@ -459,7 +509,7 @@ rule bowtie_build:
     # TODO: consider runnig this as a shadow rule
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-bowtie_build.log"
-    input: rules.remove_human_dna_using_centrifuge.output if run_remove_human_dna_using_centrifuge else rules.reformat_fasta.output.contig
+    input: get_fasta
     # I touch this file because the files created have different suffix
     output:
         o1 = expand(dirs_dict["MAPPING_DIR"] + "/{group}/{group}-contigs" + '.{i}.bt2', i=[1,2,3,4], group="{group}"),
@@ -471,14 +521,28 @@ rule bowtie_build:
     shell: "bowtie2-build {input} {params.prefix} >> {log} 2>&1"
 
 
+def input_for_bowtie(wildcards):
+    '''Creating a dictionary containing the input files for bowtie.'''
+    d = {'build_output': rules.bowtie_build.output}
+    # add the fastq files paths to the dictionary:
+    if A(['qc', 'run'], config, True):
+        # by default, use the output of the qc
+        d['r1'] = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
+        d['r2'] = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
+        
+    else:
+        # if no qc is requested, use raw input
+        d['r1'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r1'])
+        d['r2'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r2'])
+    
+    return d
+
+
 rule bowtie:
     """ Run mapping with bowtie2,  sort and convert to bam with samtools"""
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-bowtie.log"
-    input:
-        build_output = rules.bowtie_build.output,
-        r1 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R1.fastq.gz",
-        r2 = dirs_dict["QC_DIR"] + "/{sample}-QUALITY_PASSED_R2.fastq.gz"
+    input: unpack(input_for_bowtie)
     # setting the output as temp, since we only want to keep the bam file.
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}.sam")
     params:
@@ -532,7 +596,7 @@ rule anvi_profile:
         aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5",
         runlog = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/RUNLOG.txt"
     params:
-        # minimal length of contig to include in the profiling
+        # minimal length of contigs to include in the profiling
         # if not specified in the config file then default is 2,500.
         min_contig_length = A(["anvi_profile", "min_contig_length"], config, default_value=2500),
         # if profiling to individual assembly then clustering contigs

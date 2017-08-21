@@ -25,6 +25,7 @@ cp ../mock_files_for_merenlab_metagenomics_pipeline/samples-no-groups.txt $outpu
 # we have to go into the test directory because snakemake requires you run the command from the directory where the snakemake is
 cd $output_dir
 
+
 INFO "Call snakefile"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd
@@ -34,6 +35,15 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config all_against_all=True \
           output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL"}'
+
+
+INFO "Call snakefile with all against all with no qc and no reformat fasta"
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
+          $cmd \
+          --config all_against_all=True \
+          output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL_USING_RAW_INPUTS"}' \
+          qc='{"run": False}' \
+          reformat_fasta='{"run": False}'
 
 
 INFO "decompress mock reference files"
@@ -57,12 +67,26 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 
 INFO "Call snakefile with no group list in reference mode"
-INFO "This one shouldn't do anything and just say 'Nothing to be done.'"
+INFO "If you run this test in full mode then this one shouldn't do anything and just say 'Nothing to be done.'"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt' \
           output_dirs='{"MERGE_DIR": "06_MERGED_REFERENCE_MODE_all_against_all"}' \
           samples_txt='samples-no-groups.txt'
+
+
+INFO "Call snakefile with group list with all against all with no qc and no reformat_fasta"
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
+          $cmd \
+          --config references_txt='references.txt'\
+          all_against_all=True \
+          output_dirs='{"MERGE_DIR": "06_MERGED_REFERENCE_MODE_all_against_all_USING_RAW_INPUTS"}' \
+          qc='{"run": False}' \
+          reformat_fasta='{"run": False}'
+
+INFO "All tests finished succesfully"
+INFO "Here is a list of all the rules in the workflow:"
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile -l
 
 # go back to the directory where we started
 cd -

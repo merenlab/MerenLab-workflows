@@ -150,6 +150,34 @@ The step-specific configurations in the `config.json` file always have the follo
 
 Notice that everything has to have quotation marks (to be compatible with the JSON format).
 
+### `qc`
+
+If you already performed QC, and so wish to skip qc, then simply add this to your config file:
+
+```
+	"qc": {
+		"run": false
+	}
+```
+
+A nice trick worth knowing: if you only want to qc your files and then compress them (and not do anything else), simply invoke the workflow with the following command:
+
+```
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --until gzip_fastqs
+```
+
+To understand this better, refer to the snakemake documentation.
+
+### `reformat_fasta`
+
+By default, the workflow would run `anvi-script-reformat-fasta` on your fasta files (whether they are the result of an assembly or if these are reference fasta files in "reference mode"). If you wish to skip this, and keep your contigs names, then add this to your config file:
+
+```json
+	"reformat_fasta": {
+		"run": false
+	}
+```
+
 ### `megahit`
 
 The following parameters are available:
