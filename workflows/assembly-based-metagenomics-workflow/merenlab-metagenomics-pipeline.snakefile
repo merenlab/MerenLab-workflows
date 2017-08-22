@@ -290,18 +290,20 @@ rule megahit:
         min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
         # portion of total memory to use by megahit
         memory = float(A(["megahit", "memory"], config, default_value=0.4))
-    # TODO: maybe change to shaddow, because with current configuration, if a job is canceled then all
-    # the files that were created stay there.
     # Notice that megahit requires a directory to be specified as
     # output. If the directory already exists then megahit will not
-    # run. To avoid this, the output for this rule is defined as the
-    # directory (and not the assembly fasta file), because if the
-    # fasta file was defined as the output of the rule, then snakemake
-    # would automaticaly create the directory.
-    # output folder for megahit is temporary (using the snakemake temp())
-    output: temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP")
+    # run. To avoid this, the for megahit is a temporary directory,
+    # once megahit is done running then the contigs database is moved
+    # to the final location.
+    output:
+        temp_dir = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"),
+        contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
     threads: T('megahit', 11)
     resources: nodes = T('megahit', 11),
+    # Making this rule a shadow rule so all extra files created by megahit
+    # are not retaineded (it is not enough to define the directory as temporary
+    # because when failing in the middle of a run, snakemake doesn't delete directories)
+    shadow: "full"
     run:
         r1 = ','.join(input.r1)
         r2 = ','.join(input.r2)
@@ -309,32 +311,12 @@ rule megahit:
         cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
             " --min-contig-len {params.min_contig_len}" + \
             " -m {params.memory}" + \
-            " -o {output}" + \
+            " -o {output.temp_dir}" + \
             " -t {threads}" + \
             " >> {log} 2>&1"
         print("Running: %s" % cmd)
         shell(cmd)
-
-
-rule touch_megahit_output:
-    '''
-        Since the output of the megahit rule is a folder (see the comments
-        for the rule above), this rule is here to move the final assembly
-        fasta to the final assembly folder. This allows later rules to be
-        ignorant of the fact that the megahit rule output is a folder.
-        This way if in the future we will want to use a different assembler
-        that would work well with the snakemake way then we wouldnt have
-        to change downstream rules.
-    '''
-    log: dirs_dict["LOGS_DIR"] + "/{group}-touch_megahit_output.log"
-    input:
-        dir = dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"
-    output:
-        contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
-    threads: T('touch_megahit_output')
-    resources: nodes = T('touch_megahit_output'),
-    shell:
-        "mv {input.dir}/final.contigs.fa {output.contigs}"
+        shell("mv {output.temp_dir}/final.contigs.fa {output.contigs}")
 
 
 def get_raw_fasta(wildcards):
