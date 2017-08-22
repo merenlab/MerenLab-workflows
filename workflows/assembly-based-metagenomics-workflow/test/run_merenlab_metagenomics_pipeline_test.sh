@@ -29,6 +29,10 @@ cd $output_dir
 INFO "Call snakefile"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd
+if [ $2 == "wait" ];then
+    read -n 1 -s -r -p "Press any key to continue"
+fi
+
 
 INFO "Call snakefile with all against all"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
@@ -38,6 +42,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 
 INFO "Call snakefile with all against all with no qc"
+if [ $2 == "wait" ];then
+    read -n 1 -s -r -p "Press any key to continue"
+fi
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config all_against_all=True \
@@ -50,6 +57,9 @@ gzip -d three_samples_example/*.fa.gz
 
 
 INFO "Call snakefile with group list"
+if [ $2 == "wait" ];then
+    read -n 1 -s -r -p "Press any key to continue"
+fi
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt' \
@@ -58,6 +68,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 
 INFO "Call snakefile with group list with all against all"
+if [ $2 == "wait" ];then
+    read -n 1 -s -r -p "Press any key to continue"
+fi
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt'\
@@ -67,6 +80,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 INFO "Call snakefile with no group list in reference mode"
 INFO "If you run this test in full mode then this one shouldn't do anything and just say 'Nothing to be done.'"
+if [ $2 == "wait" ];then
+    read -n 1 -s -r -p "Press any key to continue"
+fi
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt' \
@@ -75,6 +91,9 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 
 INFO "Call snakefile with group list with all against all with no qc and no reformat_fasta"
+if [ $2 == "wait" ];then
+    read -n 1 -s -r -p "Press any key to continue"
+fi
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt'\
