@@ -13,5 +13,5 @@ __email__ = "alon.shaiber@gmail.com"
 
 
 shell(
-    "anvi-script-reformat-fasta {snakemake.input.contigs} -o {snakemake.output.contig} -r"
+    "anvi-script-reformat-fasta {snakemake.input.contigs} -o {snakemake.output.contigs} -r"
     "{snakemake.output.report} --simplify-names --prefix {snakemake.params.prefix} &>> {snakemake.log}")
