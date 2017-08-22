@@ -260,29 +260,47 @@ rule gen_qc_report:
     resources: nodes = T('gen_qc_report', 1)
     run: 
         report_dict = {}
+        report_column_headers = ['number of pairs analyzed',
+             'total pairs passed',
+             'total pairs passed (percent of all pairs)',
+             'total pair_1 trimmed',
+             'total pair_1 trimmed (percent of all passed pairs)',
+             'total pair_2 trimmed',
+             'total pair_2 trimmed (percent of all passed pairs)',
+             'total pairs failed',
+             'total pairs failed (percent of all pairs)'
+             'pairs failed due to pair_1',
+             'pairs failed due to pair_1 (percent of all failed pairs)',
+             'pairs failed due to pair_2',
+             'pairs failed due to pair_2 (percent of all failed pairs)',
+             'pairs failed due to both',
+             'pairs failed due to both (percent of all failed pairs)',
+             'FAILED_REASON_P',
+             'FAILED_REASON_P (percent of all failed pairs)',
+             'FAILED_REASON_N',
+             'FAILED_REASON_N (percent of all failed pairs)',
+             'FAILED_REASON_C33',
+             'FAILED_REASON_C33 (percent of all failed pairs)']
         for filename in input:
             sample = filename.split("-STATS.txt")[0]
-            report_dict[sample] = {}
+            report_dict[sample] = dict.fromkeys(report_column_headers, 0)
             with open(filename,'r') as f:
                 firstline = True
                 for line in f.readlines():
-                    print(line)
                     s1 = line.split(':')
                     numeric_header = s1[0].strip()
                     s2 = s1[1].split('(')
                     numeric = s2[0].strip()
-                    print(s2)
-                    percent = ''
-                    percent_header = ''
+                    report_dict[sample][numeric_header] = numeric
                     if not firstline:
                         s3 = s2[1].split(' ')
-                        percent = s3[0]
-                        percent_header = "(percent " + " ".join(s3[1:])
+                        percent = s3[0].strip('%')
+                        percent_header = numeric_header + " (percent " + " ".join(s3[1:])
+                        percent_header = percent_header.strip()
+                        report_dict[sample][percent_header] = percent
                     else:
                         firstline = False
-                    report_dict[sample][numeric_header] = numeric
-                    report_dict[sample][percent_header] = percent
-        u.store_dict_as_TAB_delimited_file(report_dict, output[0])
+        u.store_dict_as_TAB_delimited_file(report_dict, output[0], headers= ["sample"] + report_column_headers)
 
 
 rule gzip_fastqs:
