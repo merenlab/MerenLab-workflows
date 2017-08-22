@@ -268,7 +268,7 @@ rule gen_qc_report:
              'total pair_2 trimmed',
              'total pair_2 trimmed (percent of all passed pairs)',
              'total pairs failed',
-             'total pairs failed (percent of all pairs)'
+             'total pairs failed (percent of all pairs)',
              'pairs failed due to pair_1',
              'pairs failed due to pair_1 (percent of all failed pairs)',
              'pairs failed due to pair_2',
