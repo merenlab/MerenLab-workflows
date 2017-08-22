@@ -37,13 +37,12 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL"}'
 
 
-INFO "Call snakefile with all against all with no qc and no reformat fasta"
+INFO "Call snakefile with all against all with no qc"
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config all_against_all=True \
           output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL_USING_RAW_INPUTS"}' \
-          qc='{"run": False}' \
-          reformat_fasta='{"run": False}'
+          qc='{"run": False}'
 
 
 INFO "decompress mock reference files"
