@@ -250,6 +250,41 @@ rule qc:
     shell: "iu-filter-quality-minoche {input.ini} --ignore-deflines >> {log} 2>&1"
 
 
+rule gen_qc_report:
+    version: 1.0
+    log: dirs_dict["LOGS_DIR"] + "/gen_qc_report.log"
+    input: expand(dirs_dict["QC_DIR"] + "/{sample}-STATS.txt", sample=sample_names)
+    output: dirs_dict["QC_DIR"] + "/qc-report.txt"
+    params:
+    threads: T('gen_qc_report', 1)
+    resources: nodes = T('gen_qc_report', 1)
+    run: 
+        report_dict = {}
+        for filename in input:
+            sample = filename.split("-STATS.txt")[0]
+            report_dict[sample] = {}
+            with open(filename,'r') as f:
+                firstline = True
+                for line in f.readlines():
+                    print(line)
+                    s1 = line.split(':')
+                    numeric_header = s1[0].strip()
+                    s2 = s1[1].split('(')
+                    numeric = s2[0].strip()
+                    print(s2)
+                    percent = ''
+                    percent_header = ''
+                    if not firstline:
+                        s3 = s2[1].split(' ')
+                        percent = s3[0]
+                        percent_header = "(percent " + " ".join(s3[1:])
+                    else:
+                        firstline = False
+                    report_dict[sample][numeric_header] = numeric
+                    report_dict[sample][percent_header] = percent
+        u.store_dict_as_TAB_delimited_file(report_dict, output[0])
+
+
 rule gzip_fastqs:
     ''' Compressing the quality controlled fastq files'''
     version: 1.0
@@ -685,7 +720,9 @@ rule anvi_merge:
         # this is here just so snakemake would run the taxonomy before running this rule
         taxonomy = rules.import_taxonomy.output if run_taxonomy_with_centrifuge else ancient(rules.gen_contigs_db.output.db),
         # this is here just so snakemake would run the hmms before running this rule
-        hmms = rules.anvi_run_hmms.output if run_anvi_run_hmms else ancient(rules.gen_contigs_db.output.db)
+        hmms = rules.anvi_run_hmms.output if run_anvi_run_hmms else ancient(rules.gen_contigs_db.output.db),
+        # this is here just so snakemake would run the gen_qc_report before running this rule
+        qc_report = rules.gen_qc_report.output if A(['qc', 'run'], config, True) else ancient(rules.gen_contigs_db.output.db)
     output:
         profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
         aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5",
