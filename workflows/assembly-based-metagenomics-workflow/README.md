@@ -170,13 +170,15 @@ To understand this better, refer to the snakemake documentation.
 
 ### `reformat_fasta`
 
-By default, the workflow would run `anvi-script-reformat-fasta` on your fasta files (whether they are the result of an assembly or if these are reference fasta files in "reference mode"). If you wish to skip this, and keep your contigs names, then add this to your config file:
+In "references mode", you may choose to skip this step, and keep your contigs names. In order to do so, add this to your config file:
 
 ```json
 	"reformat_fasta": {
 		"run": false
 	}
 ```
+
+In assembly mode, this rule is always excecuted.
 
 ### `megahit`
 

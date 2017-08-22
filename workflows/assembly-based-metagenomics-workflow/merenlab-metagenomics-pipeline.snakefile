@@ -181,6 +181,16 @@ if A('all_against_all', config) :
     group_sizes = dict.fromkeys(group_names,len(sample_names))
 
 
+if not A('references_txt', contig) and not A(['reformat_fasta','run'], config, True):
+    # in assembly mode (i.e. not in references mode) we always have
+    # to run reformat_fasta. The only reason for this is that
+    # the megahit output is temporary, and if we dont run
+    # reformat_fasta we will delete the output of meghit at the 
+    # end of the workflow without saving a copy.
+    raise ConfigError("You can't skip reformat_fasta in assembly mode"\
+                        "please change your config.json file")
+
+
 rule all:
     '''
         The target rule for the workflow.
