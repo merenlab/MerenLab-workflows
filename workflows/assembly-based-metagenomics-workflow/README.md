@@ -2,17 +2,20 @@
 
 **Important note**: this pipeline was evaluated using snakemake version 3.12.0. If you are using an older version, then we suggest upgrading to the newest version.
 
-The majority of the steps used in this pipeline are extensively described in the [anvi'o user tutorial for metagenomic workflow](http://merenlab.org/2016/06/22/anvio-tutorial-v2/). But this pipeline includes also the first steps that are not described in the anvi'o user tutorial for metagenomic workflow. The entering point to this pipeline are the unprocessed raw reads of a collection (or a single) metagenomes, and the output of the pipline is an anvi'o merged profile database ready for refinement of bins (or whatever it is that you want to do with it).
+The majority of the steps used in this pipeline are extensively described in the [anvi'o user tutorial for metagenomic workflow](http://merenlab.org/2016/06/22/anvio-tutorial-v2/). However, in contrast to that tuturial which starts with a FASTA files of contigs and BAM files, this pipeline includes steps to get there, including quality filtering, assembly, and mapping steps. detailed below.
+
+The default entering point to this pipeline are the unprocessed raw reads from one or more metagenomes. The default output of the pipline is an anvi'o merged profile database ready for refinement of bins (or whatever it is that you want to do with it).
+
 The pipline includes the following steps:
 
 1. QC of the metagenomes using [illumina-utils](https://github.com/merenlab/illumina-utils/).
-2. (Co-)Assembly using [megahit](https://github.com/voutcn/megahit).
-3. Generating an anvi'o CONTIGS database.
-4. Store HMM hits in the CONTIGS database using [anvi-run-hmms](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-run-hmms) (optional step).
-5. Run [centrifuge](https://ccb.jhu.edu/software/centrifuge/) and import taxonomy to the CONTIGS database using [anvi-import-taxonomy](http://merenlab.org/2016/06/18/importing-taxonomy/) (optional step).
-6. Mapping short reads using [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml).
-7. Profiling the individual bam files using [anvi-profile](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-profile).
-8. Merging the individual profile databases using [anvi-merge](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-merge).
+2. (Co-)Assembly of metagenomes using [megahit](https://github.com/voutcn/megahit).
+3. Generating an anvi'o CONTIGS database using [anvi-gen-contigs-database](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-gen-contigs-database).
+4. Running default anvi'o HMM profiles on the CONTIGS database using [anvi-run-hmms](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-run-hmms) (optional step).
+5. Assigning taxonomy to genes with [centrifuge](https://ccb.jhu.edu/software/centrifuge/) and importing results into the CONTIGS database using [anvi-import-taxonomy](http://merenlab.org/2016/06/18/importing-taxonomy/) (optional step).
+6. Mapping short reads from metagenomes to the contigs using [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml).
+7. Profiling individual BAM files using [anvi-profile](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-profile).
+8. Merging resulting anvi'o profile databases using [anvi-merge](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-merge).
 
 A directed acyclic graph (DAG) describing the workflow for a mock dataset could be seen below:
 
@@ -25,24 +28,23 @@ If you want to create a DAG for your dataset, simply run:
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --dag | dot -Tsvg > dag.svg
 ```
 
-### Using `dot` on mac
+### Using `dot` on MAC OSX
 
-If you are on mac, you can use `dot` by installing `graphviz`, simply run `brew install graphviz`.
+If you are using MAC OSX, you can use `dot` by installing `graphviz`, simply run `brew install graphviz`.
 
 ## Standard usage
 
-All you need is a bunch of fastq files and a `samples.txt` file to specify the names of your samples, which group they belong to (optional),
-and the path to the pair-end fastq files. For now, only pair end fastq files are supported.
+All you need is a bunch of FASTQ files, and a `samples.txt` file. A properly formatted `samples.txt` is available [here](mock_files_for_merenlab_metagenomics_pipeline/samples.txt).
 
-An example for a properly formatted `.txt` file is available [here](mock_files_for_merenlab_metagenomics_pipeline/samples.txt).
-If you prefer a different name for your samples text file, then you can provide a different name in the config file (see below).
-If nothing was provided in the config file then the default is `samples.txt`.
+The `samples.txt` file specifies the names of your samples and which group they belong to (if you optionally would like to do multiple co-assemblies as we did when we binned the TARA Oceans project metagenomes). It also describes where to find the pair-end FASTQ files (for now, we do not support single-end FASTQ runs).
 
-## Running on a cluster
+The defalt name for your samples file is `samples.txt`, but you can use a different name by specifying it in the config file (see below).
+
+## Running the workflow on a cluster
 
 When submitting to a cluster, you can utilize the [snakemake cluster execution](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution). Notice that the number of threads per rule could be changed using the `config.json` file (and not by using the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file). For more details, refer to the documentation of the configuration file below.
 
-When submitting a workflow to a cluster, snakemake requires you to limit the number of jobs using `--jobs`. If you prefer to limit the number of threads that would be used by your workflow (for example, if you share your cluster with others and you don't want to take control of all threads), then we made use of the snakemake built-in `resources`. You can set the number of jobs to your limit (or to a very big number like this one: 99834 if you dont care), and use `--resources nodes=30`, if you wish to only use 30 threads. We used the word `nodes` so that to not confuse with the reserved word `threads` in snakemake.
+When submitting a workflow to a cluster, snakemake requires you to limit the number of jobs using `--jobs`. If you prefer to limit the number of threads that would be used by your workflow (for example, if you share your cluster with others and you don't want to consume all resources), then you can make use of the snakemake built-in `resources` directive. You can set the number of jobs to your limit (or to a very big number if you dont care), and use `--resources nodes=30`, if you wish to only use 30 threads. We used the word `nodes` so that to not confuse with the reserved word `threads` in snakemake.
 
 ### A note on cluster-config
 
@@ -50,16 +52,13 @@ This note is here mainly for documentation of the code, and for those of you who
 
 ## The config file
 
-To make changes easy and accessible for the user, we tried our best to make all relevant configurations available
-to the user using a `json` formatted config file, and thus avoiding the need to change the Snakefile. For an example 
-config file go [here](mock_files_for_merenlab_metagenomics_pipeline/config.json). There are some general configurations, and there are step specific configurations.
+To make changes easy and accessible for the user, we tried our best to make all relevant configurations available to the user through a `JSON` formatted config file, and thus avoiding the need to change the Snakefile. An example config file is [here](mock_files_for_merenlab_metagenomics_pipeline/config.json). There are some general configurations, and there are step specific configurations.
 
 ## General configurations
 
 ### Output directories
 
-The following directories are expected to exist at the end of the workflow:
-"00\_LOGS", "01\_QC", "02\_ASSEMBLY", "03\_CONTIGS", "04\_MAPPING", "05\_ANVIO_PROFILE", "06\_MERGED"
+The default directory structure that will appear in the output directory include these directories: "00\_LOGS", "01\_QC", "02\_ASSEMBLY", "03\_CONTIGS", "04\_MAPPING", "05\_ANVIO_PROFILE", "06\_MERGED"
 
 Don't like these names? You can specify what is the name of the folder, by providing the following information in the config file:
 
@@ -75,7 +74,7 @@ Don't like these names? You can specify what is the name of the folder, by provi
     }
 ```
 
-When using "references mode" (see below) the default name for the `ASSEMBLY_DIR` is `02_REFERENCE_FASTA` (since in references mode no assembly is performed in the workflow, and the fasta files could be not assemblies, but rather full genomes). In order to change it, you may use `"REFERENCES_DIR"`, i.e.:
+When using the "references mode" (see below) the default name for the `ASSEMBLY_DIR` is `02_REFERENCE_FASTA`. You can change the default name the following way:
 
 ```
     "output_dirs":{
@@ -83,8 +82,7 @@ When using "references mode" (see below) the default name for the `ASSEMBLY_DIR`
     }
 ```
 
-You can change all or just some of the names of these folders.
-And you can provide an absolute path or a relative path.
+You can change all, or just some of the names of these output folders. And you can provide an absolute or a relative path for them.
 
 ### The "all against all" option
 
@@ -94,7 +92,7 @@ The default behaviour for this workflow is to create a contigs database for each
     "all_against_all: "True"
 ```
 
-For those of you who are learning `snakemake`, you might be surprised of how easy the switch between the modes is. All we need to do is tell the `anvi_merge` rule that we want all samples merged for each _group_, and snakemake immediatly infers that it needs to also run the extra mapping, and profiling steps. *Thank you snakemake!* (says everyone).
+If you are new to `snakemake`, you might be surprised to see how easy it is to switch between modes. All we need to do is tell the `anvi_merge` rule that we want all samples merged for each _group_, and snakemake immediatly infers that it needs to also run the extra mapping, and profiling steps. *Thank you snakemake!* (says everyone).
 
 An updated DAG for the workflow for our mock data is available below:
 
@@ -102,7 +100,7 @@ An updated DAG for the workflow for our mock data is available below:
 
 A little more of a mess! But also has a beauty to it :-).
 
-### Define the number of threads per rule in a cluster
+### Defining the number of threads per rule in a cluster
 
 In order to change the number of threads per rule when running on a cluster, the following structure should be used: 
 
@@ -224,6 +222,7 @@ So let's say I want to run centrifuge, I don't want to run hmms, and I want my m
 	}
 }
 ```
+
 ## Estimating occurence of population genomes in metagenomes
 
 Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
@@ -231,6 +230,6 @@ In that case, what you have is a bunch of fastq files (metagenomes) and fasta fi
 
 ![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
 
-## wrappers
+## Wrappers
 
-add a note about transferring to wrappers
+*(soon)*
