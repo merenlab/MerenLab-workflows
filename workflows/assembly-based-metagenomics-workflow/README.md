@@ -1,6 +1,6 @@
 # Snakemake workflow for assembly based metagenomics
 
-**Important note**: this pipeline was evaluated using snakemake version 3.12.0. If you are using an older version, then we suggest upgrading to the oldest version
+**Important note**: this pipeline was evaluated using snakemake version 3.12.0. If you are using an older version, then we suggest upgrading to the newest version.
 
 The majority of the steps used in this pipeline are extensively described in the [anvi'o user tutorial for metagenomic workflow](http://merenlab.org/2016/06/22/anvio-tutorial-v2/). But this pipeline includes also the first steps that are not described in the anvi'o user tutorial for metagenomic workflow. The entering point to this pipeline are the unprocessed raw reads of a collection (or a single) metagenomes, and the output of the pipline is an anvi'o merged profile database ready for refinement of bins (or whatever it is that you want to do with it).
 The pipline includes the following steps:
