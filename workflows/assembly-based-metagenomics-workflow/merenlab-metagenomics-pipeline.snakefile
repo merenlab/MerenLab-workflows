@@ -450,10 +450,10 @@ rule reformat_fasta:
     params: prefix = "{group}"
     threads: T('reformat_fasta')
     resources: nodes = T('reformat_fasta'),
-    wrapper:
-        # Notice that path to wrapper is relative to the workdir (if you
-        # want an absolute path, use 'file://' instead of 'file:')
-        "file:wrappers/reformat-fasta"
+    # FIXME: See the issue https://github.com/merenlab/MerenLab-workflows/issues/6
+    #        we should convert everything in this file to wrappers, and commit them
+    #        to the Snakemake repository.
+    shell: "anvi-script-reformat-fasta {input} -o {output.contigs} -r {output.report} --simplify-names --prefix {params.prefix} >> {log} 2>&1"
 
 
 if run_remove_human_dna_using_centrifuge:
