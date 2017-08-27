@@ -26,12 +26,9 @@ cp ../mock_files_for_merenlab_metagenomics_pipeline/samples-no-groups.txt $outpu
 cd $output_dir
 
 
-INFO "Call snakefile"
+INFO "Call snakefile" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd
-if [ $2 == "wait" ];then
-    read -n 1 -s -r -p "Press any key to continue"
-fi
 
 
 INFO "Call snakefile with all against all"
@@ -41,10 +38,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL"}'
 
 
-INFO "Call snakefile with all against all with no qc"
-if [ $2 == "wait" ];then
-    read -n 1 -s -r -p "Press any key to continue"
-fi
+INFO "Call snakefile with all against all with no qc" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config all_against_all=True \
@@ -56,10 +50,7 @@ INFO "decompress mock reference files"
 gzip -d three_samples_example/*.fa.gz 
 
 
-INFO "Call snakefile with group list"
-if [ $2 == "wait" ];then
-    read -n 1 -s -r -p "Press any key to continue"
-fi
+INFO "Call snakefile with group list" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt' \
@@ -67,10 +58,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           samples_txt='samples-no-groups.txt'
 
 
-INFO "Call snakefile with group list with all against all"
-if [ $2 == "wait" ];then
-    read -n 1 -s -r -p "Press any key to continue"
-fi
+INFO "Call snakefile with group list with all against all" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt'\
@@ -79,10 +67,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
 
 
 INFO "Call snakefile with no group list in reference mode"
-INFO "If you run this test in full mode then this one shouldn't do anything and just say 'Nothing to be done.'"
-if [ $2 == "wait" ];then
-    read -n 1 -s -r -p "Press any key to continue"
-fi
+INFO "If you run this test in full mode then this one shouldn't do anything and just say 'Nothing to be done.'" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt' \
@@ -90,10 +75,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           samples_txt='samples-no-groups.txt'
 
 
-INFO "Call snakefile with group list with all against all with no qc and no reformat_fasta"
-if [ $2 == "wait" ];then
-    read -n 1 -s -r -p "Press any key to continue"
-fi
+INFO "Call snakefile with group list with all against all with no qc and no reformat_fasta" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd \
           --config references_txt='references.txt'\

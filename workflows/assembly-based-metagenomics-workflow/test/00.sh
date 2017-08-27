@@ -11,6 +11,10 @@ INFO() {
     echo
     C ":: $1 ..."
     echo
+
+    if [ "$2" == "wait" ];then
+        read -n 1 -s -r -p "Press any key to continue"
+    fi
 }
 
 SETUP_WITH_OUTPUT_DIR() {
