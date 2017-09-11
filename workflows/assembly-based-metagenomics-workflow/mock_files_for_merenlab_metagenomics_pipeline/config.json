@@ -19,6 +19,7 @@
     "anvi_profile":{
         "min_contig_length": 2500,
         "profile_AA": true,
+        "report_variability_full": false,
         "threads": 5
     },
     "centrifuge":{

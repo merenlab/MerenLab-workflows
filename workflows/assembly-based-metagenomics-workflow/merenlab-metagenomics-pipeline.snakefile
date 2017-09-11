@@ -31,7 +31,7 @@
         http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#rule-dependencies
 
     Note on cluster configuration: because multiple rules require the
-    number of threads as input (for example anvi-profil, megahit), and I
+    number of threads as input (for example anvi-profile, megahit), and I
     couldn't find a way to make the number of threads from the
     cluster.config file available within rules, then instead I define the
     number of threads within each rule. I'm aware it's less elegant than
@@ -653,10 +653,11 @@ rule anvi_profile:
         cluster_contigs = lambda wildcards: '--cluster-contigs' if group_sizes[wildcards.group] == 1 else '',
         name = "{sample}",
         profile_AA = "--profile-AA-frequencies" if A(["anvi_profile", "profile_AA"], config)  else "",
+        report_variability_full = "--report-variability-full" if A(["anvi_profile", "report_variability_full"], config)  else "",
         output_dir = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}"
     threads: T('anvi_profile', 5)
     resources: nodes = T('anvi_profile', 5),
-    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.min_contig_length} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} >> {log} 2>&1"
+    shell: "anvi-profile -i {input.bam} -c {input.contigs} -o {params.output_dir} -M {params.min_contig_length} -S {params.name} -T {threads} --overwrite-output-destinations {params.cluster_contigs} {params.profile_AA} {params.report_variability_full} >> {log} 2>&1"
 
 
 def input_for_anvi_merge(wildcards):
