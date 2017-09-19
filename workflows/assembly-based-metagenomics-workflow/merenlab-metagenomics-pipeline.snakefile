@@ -751,7 +751,8 @@ rule anvi_merge:
     params:
         output_dir = dirs_dict["MERGE_DIR"] + "/{group}",
         name = "{group}",
-        profile_dir = dirs_dict["PROFILE_DIR"] + "/{group}"
+        profile_dir = dirs_dict["PROFILE_DIR"] + "/{group}",
+        skip_concoct_binning = "--skip-concoct-binning" if A(["anvi_merge", "skip_concoct_binning"], config)  else ""
     run:
         # using run instead of shell so we can choose the appropriate shell command.
         # In accordance with: https://bitbucket.org/snakemake/snakemake/issues/37/add-complex-conditional-file-dependency#comment-29348196
@@ -805,5 +806,5 @@ rule anvi_merge:
             create_fake_output_files(_message, output)
 
         else:
-            shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} --overwrite-output-destinations >> {log} 2>&1")
+            shell("anvi-merge {input.profiles} -o {params.output_dir} -c {input.contigs} -S {params.name} {params.skip_concoct_binning} --overwrite-output-destinations >> {log} 2>&1")
 
