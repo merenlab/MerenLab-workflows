@@ -369,7 +369,7 @@ rule megahit:
             " >> {log} 2>&1"
         print("Running: %s" % cmd)
         shell(cmd)
-        shell("mv {output.temp_dir}/final.contigs.fa {output.contigs}")
+        shell("mv {output.temp_dir}/final.contigs.fa {output.contigs} >> {log} 2>&1")
 
 
 def get_raw_fasta(wildcards):
