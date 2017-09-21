@@ -8,7 +8,7 @@ The default entering point to this pipeline are the unprocessed raw reads from o
 
 The pipline includes the following steps:
 
-1. QC of the metagenomes using [illumina-utils](https://github.com/merenlab/illumina-utils/).
+1. QC of the metagenomes using [illumina-utils](https://github.com/merenlab/illumina-utils/). Including generating a report of the results of the QC.
 2. (Co-)Assembly of metagenomes using [megahit](https://github.com/voutcn/megahit).
 3. Generating an anvi'o CONTIGS database using [anvi-gen-contigs-database](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-gen-contigs-database).
 4. Running default anvi'o HMM profiles on the CONTIGS database using [anvi-run-hmms](http://merenlab.org/2016/06/22/anvio-tutorial-v2/#anvi-run-hmms) (optional step).
@@ -132,6 +132,8 @@ The following steps are only optional:
 
 1. Assigning taxonomy with centrifuge (default is **not** running).
 2. Running hmm profiles on the contigs database (default is **running**).
+3. QC for the input metagenomes (default is **running**, but if you already performed QC, you can skip this step).
+4. Reformating the labels of the fasta files with `anvi-script-reformat-fasta` (default is **running**).
 
 For more details refer to the specific documentation for these steps below.
 
@@ -149,6 +151,15 @@ The step-specific configurations in the `config.json` file always have the follo
 Notice that everything has to have quotation marks (to be compatible with the JSON format).
 
 ### `qc`
+
+A report with the full results of the QC for each sample is generated. Below you can see an example:
+
+```
+sample	number of pairs analyzed	total pairs passed	total pairs passed (percent of all pairs)	total pair_1 trimmed	total pair_1 trimmed (percent of all passed pairs)	total pair_2 trimmed	total pair_2 trimmed (percent of all passed pairs)	total pairs failed	total pairs failed (percent of all pairs)	pairs failed due to pair_1	pairs failed due to pair_1 (percent of all failed pairs)	pairs failed due to pair_2	pairs failed due to pair_2 (percent of all failed pairs)	pairs failed due to both	pairs failed due to both (percent of all failed pairs)	FAILED_REASON_P	FAILED_REASON_P (percent of all failed pairs)	FAILED_REASON_N	FAILED_REASON_N (percent of all failed pairs)	FAILED_REASON_C33	FAILED_REASON_C33 (percent of all failed pairs)
+01_QC/BM_HC_HMP_S001_01	1787927	1655580	92.60	580936	35.09	453098	27.37	132347	7.40	51935	39.24	49249	37.21	31163	23.55	0	0	30573	23.10	101774	76.90
+01_QC/BM_HC_HMP_S002_01	4718043	4224421	89.54	828338	19.61	687063	16.26	493622	10.46	207050	41.95	197028	39.91	89544	18.14	0	0	277734	56.26	215888	43.74
+01_QC/BM_HC_HMP_S003_01	1483467	1378881	92.95	688143	49.91	1378654	99.98	104586	7.05	22155	21.18	64076	61.27	18355	17.55	0	0	2436	2.33	102150	97.67
+```
 
 If you already performed QC, and so wish to skip qc, then simply add this to your config file:
 
