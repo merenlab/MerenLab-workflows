@@ -356,7 +356,6 @@ rule megahit:
     # Making this rule a shadow rule so all extra files created by megahit
     # are not retaineded (it is not enough to define the directory as temporary
     # because when failing in the middle of a run, snakemake doesn't delete directories)
-    shadow: "full"
     run:
         r1 = ','.join(input.r1)
         r2 = ','.join(input.r2)
