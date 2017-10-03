@@ -211,6 +211,10 @@ The following parameters are available:
 
 `min_contig_length` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
 
+### `samtools_view`
+
+`view_flag` - the samtools command executed is `samtools view {view_flag} -bS {input} -o {output}`, where `view_flag` specifies `{view_flag}`. You can therefore specify all parameters that aren't `-bS` or `-o` with `view_flag`. For example, you could specify set `view_flag` to be `-f 2`, or `-f 2 -q 1` (for a full list see the samtools [documentation](http://www.htslib.org/doc/samtools.html)). The default is `-F 4`.
+
 ### example
 
 So let's say I want to run centrifuge, I don't want to run hmms, and I want my minimum contig length for megahit and anvi-profile to be 500 and and 3,000 respectively. Then my config file would like like this:
@@ -234,12 +238,23 @@ So let's say I want to run centrifuge, I don't want to run hmms, and I want my m
 }
 ```
 
-## Estimating occurence of population genomes in metagenomes
+## Estimating occurence of population genomes in metagenomes (reference mode)
 
 Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
-In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using to `.txt` files: `samples.txt`, and `references.txt`. The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used. If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
+In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using two `.txt` files: `samples.txt`, and `references.txt`. 
+
+`references.txt` should be a 2 column tab-separated file, where the first column specifies a reference name and the second column specifies the filepath of the fasta file for that reference. An example `references.txt` can be found [here](mock_files_for_merenlab_metagenomics_pipeline/references.txt).
+
+
+The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used (aka the name of the reference as defined in `references.txt`). If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
 
 ![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
+
+After properly formatting your `samples.txt` and `references.txt`, reference mode is initiated by adding this to your `config.json`:
+
+```
+"references_txt": "references.txt"
+```
 
 ## Wrappers
 
