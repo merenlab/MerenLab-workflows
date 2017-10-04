@@ -610,7 +610,7 @@ rule samtools_view:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
-    params: view_flag = A(["samtools_view", "view_flag"], config)
+    params: view_flag = A(["samtools_view", "view_flag"], config, default_value="-F 4")
     # output as temp. we only keep the final bam file
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: T('samtools_view', 4)
