@@ -481,9 +481,10 @@ rule gen_contigs_db:
     output:
         db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
         aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
+    params: group = "{group}"
     threads: T('gen_contigs_db', 5)
     resources: nodes = T('gen_contigs_db', 5),
-    shell: "anvi-gen-contigs-database -f {input} -o {output.db} >> {log} 2>&1"
+    shell: "anvi-gen-contigs-database -f {input} -o {output.db} -n {params.group} >> {log} 2>&1"
 
 
 if run_taxonomy_with_centrifuge:
@@ -609,11 +610,12 @@ rule samtools_view:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
+    params: view_flag = A(["samtools_view", "view_flag"], config, default_value="-F 4")
     # output as temp. we only keep the final bam file
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: T('samtools_view', 4)
     resources: nodes = T('samtools_view', 4),
-    shell: "samtools view -F 4 -bS {input} -o {output} >> {log} 2>&1"
+    shell: "samtools view {params.view_flag} -bS {input} -o {output} >> {log} 2>&1"
 
 
 rule anvi_init_bam:
