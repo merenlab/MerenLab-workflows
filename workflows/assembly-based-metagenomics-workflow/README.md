@@ -213,7 +213,12 @@ The following parameters are available:
 
 ### `samtools_view`
 
-`view_flag` - the samtools command executed is `samtools view {view_flag} -bS {input} -o {output}`, where `view_flag` specifies `{view_flag}`. You can therefore specify all parameters that aren't `-bS` or `-o` with `view_flag`. For example, you could specify set `view_flag` to be `-f 2`, or `-f 2 -q 1` (for a full list see the samtools [documentation](http://www.htslib.org/doc/samtools.html)). The default is `-F 4`.
+`view_flags` - the samtools command executed is `samtools view {view_flags} -bS {stuff} -o {stuff}`, where `view_flags` specifies what goes in place of `{view_flags}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all options that aren't `-bS` or `-o` with `view_flags`. For example, you could set `view_flag` to be `-f 2`, or `-f 2 -q 1` (for a full list see the samtools [documentation](http://www.htslib.org/doc/samtools.html)). The default is `-F 4`.
+
+### `bowtie`
+
+`bowtie_flags` - the bowtie2 command executed is `bowtie2 --threads {stuff} -x {stuff} -1 {stuff} -2 {stuff} {bowtie_flags} -S {stuff}`, where `bowtie_flags` specifies what goes in place of `{bowtie_flags}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all parameters that aren't `--threads`, `-x`, `-1`, `-2`, or `-S` with `bowtie_flags`. For example, if you don't want gapped alignment (aka the reference does not recruit any reads that contain indels with respect to it), and you don't want to store unmapped reads in the SAM output file, set `bowtie_flags` to be `--rfg 10000,10000 --no-unal` (for a full list of options see the bowtie2 [documentation](http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#options)). The default is `--no-unal`.
+
 
 ### example
 
