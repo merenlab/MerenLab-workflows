@@ -604,10 +604,10 @@ rule bowtie:
     params:
         dir = dirs_dict["MAPPING_DIR"] + "/{sample}",
         bowtie_build_prefix = rules.bowtie_build.params.prefix,
-        bowtie_flags = A(["bowtie", "bowtie_flags"], config, default_value="--no-unal")
+        additional_params = A(["bowtie", "additional_params"], config, default_value="--no-unal")
     threads: T('bowtie', 10)
     resources: nodes = T('bowtie', 10),
-    shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} {params.bowtie_flags} -S {output} >> {log} 2>&1"
+    shell: "bowtie2 --threads {threads} -x {params.bowtie_build_prefix} -1 {input.r1} -2 {input.r2} {params.additional_params} -S {output} >> {log} 2>&1"
 
 
 rule samtools_view:
@@ -615,12 +615,12 @@ rule samtools_view:
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-{sample}-samtools_view.log"
     input: rules.bowtie.output
-    params: view_flags = A(["samtools_view", "view_flags"], config, default_value="-F 4")
+    params: additional_params = A(["samtools_view", "additional_params"], config, default_value="-F 4")
     # output as temp. we only keep the final bam file
     output: temp(dirs_dict["MAPPING_DIR"] + "/{group}/{sample}-RAW.bam")
     threads: T('samtools_view', 4)
     resources: nodes = T('samtools_view', 4),
-    shell: "samtools view {params.view_flags} -bS {input} -o {output} >> {log} 2>&1"
+    shell: "samtools view {params.additional_params} -bS {input} -o {output} >> {log} 2>&1"
 
 
 rule anvi_init_bam:
