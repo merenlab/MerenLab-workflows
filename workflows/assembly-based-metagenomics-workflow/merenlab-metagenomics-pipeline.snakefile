@@ -100,7 +100,7 @@ def A(_list, d, default_value = ""):
     return d
 
 
-def B(_param, _rule, _default=''):
+def B(_rule, _param, _default=''):
     # helper function for params
     val = A([_rule, _param], config, _default)
     if val:
@@ -581,10 +581,10 @@ rule anvi_run_ncbi_cogs:
     output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_ncbi_cogs-{group}.done")
     params:
         # anvi-run-ncbi-cogs params. See anvi-run-ncbi-cogs help menu for more info.
-        cogs_data_dir = B(['anvi_run_ncbi_cogs','cogs_data_dir'], config),
-        sensitive = B(['anvi_run_ncbi_cogs','sensitive'], config),
-        temporary_dir_path = B(['anvi_run_ncbi_cogs','temporary_dir_path'], config),
-        search_with = B(['anvi_run_ncbi_cogs','search_with'], config)
+        cogs_data_dir = B('anvi_run_ncbi_cogs', 'cogs_data_dir', config),
+        sensitive = B('anvi_run_ncbi_cogs', 'sensitive', config),
+        temporary_dir_path = B('anvi_run_ncbi_cogs', 'temporary_dir_path', config),
+        search_with = B('anvi_run_ncbi_cogs', 'search_with', config)
     threads: T('anvi_run_ncbi_cogs', 5)
     resources: nodes = T('gen_contigs_db', 5),
     shell: "anvi-run-ncbi-cogs -c {input} -T {threads} {params.cogs_data_dir} {params.sensitive} {params.temporary_dir_path} {params.search_with} >> {log} 2>&1"
