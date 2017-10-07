@@ -8,7 +8,7 @@ SETUP_WITH_OUTPUT_DIR $1
 cmd="-pn"
 # if you want the test to actually run through the pipeline
 # then call it like this: bash run_merenlab_metagenomics_pipeline_test.sh sandbox/test-output full
-if [ $# -eq 2 ]; then
+if [ $# -ge 2 ]; then
     if [ $2 == "full" ]; then
         cmd=$3
     fi
