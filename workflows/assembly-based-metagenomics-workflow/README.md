@@ -117,7 +117,7 @@ qc|2
 megahit|11
 gen\_contigs\_db|5
 run\_centrifuge|5
-run\_anvi\_run\_hmms|20
+anvi\_run\_hmms|20
 bowtie\_build|4
 bowtie|10
 samtools\_view|4
@@ -203,7 +203,7 @@ The following parameters are available:
 
 `db` - if you choose run centrifuge, you **must** provide the path to the database (for example `$CENTRIFUGE_BASE/p+h+v/p+h+v`).
 
-### `run_anvi_hmms`
+### `anvi_run_hmms`
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
 
@@ -230,7 +230,7 @@ So let's say I want to run centrifuge, I don't want to run hmms, and I want my m
 		"run": true,
 		"db": "$CENTRIFUGE_BASE/p+h+v/p+h+v"
 	},
-	"run_anvi_hmms":{
+	"anvi_run_hmms":{
 		"run": false
 	},
 	"anvi_profile:{
