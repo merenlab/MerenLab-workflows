@@ -555,8 +555,8 @@ if run_anvi_run_hmms:
         # using a snakemake flag file as an output since no file is generated
         # by the rule.
         output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_hmms-{group}.done")
-        threads: T('run_anvi_run_hmms', 20)
-        resources: nodes = T('run_anvi_run_hmms', 20),
+        threads: T('anvi_run_hmms', 20)
+        resources: nodes = T('anvi_run_hmms', 20),
         shell: "anvi-run-hmms -c {input} -T {threads} >> {log} 2>&1"
 
 
