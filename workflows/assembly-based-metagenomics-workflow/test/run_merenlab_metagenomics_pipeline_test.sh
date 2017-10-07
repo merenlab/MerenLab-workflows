@@ -10,7 +10,7 @@ cmd="-pn"
 # then call it like this: bash run_merenlab_metagenomics_pipeline_test.sh sandbox/test-output full
 if [ $# -eq 2 ]; then
     if [ $2 == "full" ]; then
-        cmd=""
+        cmd=$3
     fi
 fi
 # copy latest script here
