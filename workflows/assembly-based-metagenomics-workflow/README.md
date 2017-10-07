@@ -118,6 +118,7 @@ megahit|11
 gen\_contigs\_db|5
 run\_centrifuge|5
 anvi\_run\_hmms|20
+anvi\_run_\ncbi\_cogs|20
 bowtie\_build|4
 bowtie|10
 samtools\_view|4
@@ -206,6 +207,32 @@ The following parameters are available:
 ### `anvi_run_hmms`
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
+
+### `anvi_run_ncbi_cogs`
+
+`run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
+
+Additionaly, you can set all the parameters that are available for `anvi-run-ncbi-cogs` (the default setting for all the following parameters is to take the default setting of `anvi-run-ncbi-cogs`):
+
+`cog_data_dir` - path to the cog data directory.
+
+`sensitive` - flag for DIAMOND sensitivity (should be either `true` or `false`. The default is `false`).
+
+`temporary_dir_path` - see `anvi-run-ncbi-cogs` documentation.
+
+`search_with` - see `anvi-run-ncbi-cogs` documentation.
+
+Example:
+
+```JSON
+	"anvi_run_ncbi_cogs":
+		"run": true,
+		"cog_data_dir": "/USER/COG_DIR/",
+		"sensitive": true,
+		"temporary_dir_path": "/USER/MY_TEMP_DIR/",
+		"search_with": "blastp",
+		"threads": 1
+```
 
 ### `anvi_profile`
 

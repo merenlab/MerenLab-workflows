@@ -99,6 +99,18 @@ def A(_list, d, default_value = ""):
             return default_value
     return d
 
+
+def B(_param, _rule, _defulat):
+    # helper function for params
+    val = A([_rule, _param], config, _default)
+    if val:
+        if isinstance(val, bool):
+            # the param is a flag so no need for a value
+            val = ''
+        return '--' + _param.replace('_','-') + ' ' + val
+    else:
+        return ''
+
 # a helper function to get the user defined number of threads for a rule
 def T(rule_name, N=1): return A([rule_name,'threads'], config, default_value=N)
 
@@ -118,6 +130,8 @@ run_remove_human_dna_using_centrifuge = A(["remove_human_dna_using_centrifuge", 
 run_taxonomy_with_centrifuge = A(["run_centrifuge", "run"], config)
 # default is running anvi_run_hmms
 run_anvi_run_hmms = A(["anvi_run_hmms", "run"], config, default_value=True)
+# default is running anvi_run_ncbi_cogs
+run_anvi_run_ncbi_cogs = A(["anvi_run_ncbi_cogs", "run"], config, default_value=True)
 # Sanity check for centrifuge db
 if run_taxonomy_with_centrifuge:
     if not A(["run_centrifuge", "db"], config):
@@ -560,6 +574,22 @@ if run_anvi_run_hmms:
         shell: "anvi-run-hmms -c {input} -T {threads} >> {log} 2>&1"
 
 
+rule anvi_run_ncbi_cogs:
+    version: anvio.__contigs__version__
+    log: dirs_dict["LOGS_DIR"] + "/{group}-anvi_run_ncbi_cogs.log"
+    input: ancient(rules.gen_contigs_db.output.db)
+    output: touch(dirs_dict["CONTIGS_DIR"] + "/anvi_run_ncbi_cogs-{group}.done")
+    params:
+        # anvi-run-ncbi-cogs params. See anvi-run-ncbi-cogs help menu for more info.
+        cogs_data_dir = B(['anvi_run_ncbi_cogs','cogs_data_dir'], config),
+        sensitive = B(['anvi_run_ncbi_cogs','sensitive'], config),
+        temporary_dir_path = B(['anvi_run_ncbi_cogs','temporary_dir_path'], config),
+        search_with = B(['anvi_run_ncbi_cogs','search_with'], config)
+    threads: T('anvi_run_ncbi_cogs', 5)
+    resources: nodes = T('gen_contigs_db', 5),
+    shell: "anvi-run-ncbi-cogs -c {input} -T {threads} {params.cogs_data_dir} {params.sensitive} {params.temporary_dir_path} {params.search_with} >> {log} 2>&1"
+
+
 rule bowtie_build:
     """ Run bowtie-build on the contigs fasta"""
     # TODO: consider runnig this as a shadow rule
@@ -746,6 +776,8 @@ rule anvi_merge:
         taxonomy = rules.import_taxonomy.output if run_taxonomy_with_centrifuge else ancient(rules.gen_contigs_db.output.db),
         # this is here just so snakemake would run the hmms before running this rule
         hmms = rules.anvi_run_hmms.output if run_anvi_run_hmms else ancient(rules.gen_contigs_db.output.db),
+        # this is here just so snakemake would run the ncbi cogs before running this rule
+        cogs = rules.anvi_run_ncbi_cogs.output if run_anvi_run_ncbi_cogs else ancient(rules.gen_contigs_db.output.db),
         # this is here just so snakemake would run the gen_qc_report before running this rule
         qc_report = rules.gen_qc_report.output if A(['qc', 'run'], config, True) else ancient(rules.gen_contigs_db.output.db)
     output:
