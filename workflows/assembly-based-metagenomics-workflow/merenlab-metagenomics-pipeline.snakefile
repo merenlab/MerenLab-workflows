@@ -100,7 +100,7 @@ def A(_list, d, default_value = ""):
     return d
 
 
-def B(_param, _rule, _defulat=''):
+def B(_param, _rule, _default=''):
     # helper function for params
     val = A([_rule, _param], config, _default)
     if val:
