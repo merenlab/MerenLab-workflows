@@ -529,7 +529,7 @@ if run_taxonomy_with_centrifuge:
         output:
             hits = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_hits.tsv",
             report = dirs_dict["CONTIGS_DIR"] + "/{group}-centrifuge_report.tsv"
-        params: db=config['centrifuge']['db']
+        params: db=config["run_centrifuge"]['db']
         threads: T('run_centrifuge', 5)
         resources: nodes = T('run_centrifuge', 5),
         shell: "centrifuge -f -x {params.db} {input} -S {output.hits} --report-file {output.report} --threads {threads} >> {log} 2>&1"
