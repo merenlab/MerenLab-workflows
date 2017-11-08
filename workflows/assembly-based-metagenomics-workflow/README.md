@@ -1,5 +1,31 @@
 # Snakemake workflow for assembly based metagenomics
 
+# contents
+
+- [Introduction](#Introduction)
+- [Standard Usage](#Standard-usage)
+- [Running the workflow on a cluster](#Running-the-workflow on-a-cluster)
+- [The config file](#The-config-file)
+	- [General configurations](#General-configurations)
+		- [Output Directories](#Output-directories)
+		- [The "all against all" option](#The-"all-against-all"-option)
+		- [Defining the number of threads per rule in a cluster](#Defining-the-number-of-threads-per-rule-in-a-cluster)
+		- [Optional Steps](#Optional-steps)
+	- [Step-Specific Configurations](#Step-specific-configurations)
+		- [QC](#qc)
+		- [reformat_fasta](#reformat_fasta)
+		- [megahit](#megahit)
+		- [run_centrifuge](#run_centrifuge)
+		- [anvi_run_hmms](#anvi_run_hmms)
+		- [anvi_run_ncbi_cogs](#anvi_run_ncbi_cogs)
+		- [anvi_profile](#anvi_profile)
+		- [samtools_view](#samtools_view)
+		- [bowtie](#bowtie)
+	- [Example config.json file](#Example-config.json-file)
+- [Reference Mode](#Reference-Mode)
+
+# Introduction
+
 **Important note**: this pipeline was evaluated using snakemake version 3.12.0. If you are using an older version, then we suggest upgrading to the newest version.
 
 The majority of the steps used in this pipeline are extensively described in the [anvi'o user tutorial for metagenomic workflow](http://merenlab.org/2016/06/22/anvio-tutorial-v2/). However, in contrast to that tuturial which starts with a FASTA files of contigs and BAM files, this pipeline includes steps to get there, including quality filtering, assembly, and mapping steps. detailed below.
@@ -32,7 +58,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --dag | dot -Tsvg
 
 If you are using MAC OSX, you can use `dot` by installing `graphviz`, simply run `brew install graphviz`.
 
-## Standard usage
+# Standard usage
 
 All you need is a bunch of FASTQ files, and a `samples.txt` file. A properly formatted `samples.txt` is available [here](mock_files_for_merenlab_metagenomics_pipeline/samples.txt).
 
@@ -40,17 +66,17 @@ The `samples.txt` file specifies the names of your samples and which group they 
 
 The defalt name for your samples file is `samples.txt`, but you can use a different name by specifying it in the config file (see below).
 
-## Running the workflow on a cluster
+# Running the workflow on a cluster
 
 When submitting to a cluster, you can utilize the [snakemake cluster execution](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution). Notice that the number of threads per rule could be changed using the `config.json` file (and not by using the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file). For more details, refer to the documentation of the configuration file below.
 
 When submitting a workflow to a cluster, snakemake requires you to limit the number of jobs using `--jobs`. If you prefer to limit the number of threads that would be used by your workflow (for example, if you share your cluster with others and you don't want to consume all resources), then you can make use of the snakemake built-in `resources` directive. You can set the number of jobs to your limit (or to a very big number if you dont care), and use `--resources nodes=30`, if you wish to only use 30 threads. We used the word `nodes` so that to not confuse with the reserved word `threads` in snakemake.
 
-### A note on cluster-config
+## A note on cluster-config
 
 This note is here mainly for documentation of the code, and for those of you who are interested in snakemake. The reason we decided not to use the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file to control the number of threads per rule, is becuase certain software require the number of threads as an input (for example `megahit` and `anvi-profile`), but the cluster config file is not available for shell commands within snakemake rules. To bypass this issue we simply put the threads configuration in the `config.json`, thus available for the user to modify.
 
-## The config file
+# The config file
 
 To make changes easy and accessible for the user, we tried our best to make all relevant configurations available to the user through a `JSON` formatted config file, and thus avoiding the need to change the Snakefile. An example config file is [here](mock_files_for_merenlab_metagenomics_pipeline/config.json). There are some general configurations, and there are step specific configurations.
 
@@ -99,6 +125,25 @@ An updated DAG for the workflow for our mock data is available below:
 ![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-all-against-all.png?raw=true "mock-dag-all-against-all")
 
 A little more of a mess! But also has a beauty to it :-).
+
+# Reference Mode
+## Estimating occurence of population genomes in metagenomes
+
+Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
+In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using two `.txt` files: `samples.txt`, and `references.txt`. 
+
+`references.txt` should be a 2 column tab-separated file, where the first column specifies a reference name and the second column specifies the filepath of the fasta file for that reference. An example `references.txt` can be found [here](mock_files_for_merenlab_metagenomics_pipeline/references.txt).
+
+
+The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used (aka the name of the reference as defined in `references.txt`). If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
+
+![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
+
+After properly formatting your `samples.txt` and `references.txt`, reference mode is initiated by adding this to your `config.json`:
+
+```
+"references_txt": "references.txt"
+```
 
 ### Defining the number of threads per rule in a cluster
 
@@ -151,7 +196,7 @@ The step-specific configurations in the `config.json` file always have the follo
 
 Notice that everything has to have quotation marks (to be compatible with the JSON format).
 
-### `qc`
+### qc
 
 A report with the full results of the QC for each sample is generated. Below you can see an example:
 
@@ -178,7 +223,7 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --until gzip_fast
 
 To understand this better, refer to the snakemake documentation.
 
-### `reformat_fasta`
+### reformat_fasta
 
 In "references mode", you may choose to skip this step, and keep your contigs names. In order to do so, add this to your config file:
 
@@ -190,7 +235,7 @@ In "references mode", you may choose to skip this step, and keep your contigs na
 
 In assembly mode, this rule is always excecuted.
 
-### `megahit`
+### megahit
 
 The following parameters are available:
 
@@ -198,17 +243,17 @@ The following parameters are available:
 
 `min_contig_len` (`--min-contig-len`) - default is 1,000.
 
-### `run_centrifuge`
+### run_centrifuge
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run centrifuge or not. The default is `false`.
 
 `db` - if you choose run centrifuge, you **must** provide the path to the database (for example `$CENTRIFUGE_BASE/p+h+v/p+h+v`).
 
-### `anvi_run_hmms`
+### anvi_run_hmms
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
 
-### `anvi_run_ncbi_cogs`
+### anvi_run_ncbi_cogs
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
 
@@ -234,20 +279,20 @@ Example:
 		"threads": 1
 ```
 
-### `anvi_profile`
+### anvi_profile
 
 `min_contig_length` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
 
-### `samtools_view`
+### samtools_view
 
 `s` - the samtools command executed is `samtools view {additional_params} -bS {stuff} -o {stuff}`, where `additional_params` specifies what goes in place of `{additional_params}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all options that aren't `-bS` or `-o` with `additional_params`. For example, you could set `view_flag` to be `-f 2`, or `-f 2 -q 1` (for a full list see the samtools [documentation](http://www.htslib.org/doc/samtools.html)). The default is `-F 4`.
 
-### `bowtie`
+### bowtie
 
 `additional_params` - the bowtie2 command executed is `bowtie2 --threads {stuff} -x {stuff} -1 {stuff} -2 {stuff} {additional_params} -S {stuff}`, where `additional_params` specifies what goes in place of `{additional_params}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all parameters that aren't `--threads`, `-x`, `-1`, `-2`, or `-S` with `additional_params`. For example, if you don't want gapped alignment (aka the reference does not recruit any reads that contain indels with respect to it), and you don't want to store unmapped reads in the SAM output file, set `additional_params` to be `--rfg 10000,10000 --no-unal` (for a full list of options see the bowtie2 [documentation](http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#options)). The default is `--no-unal`.
 
 
-### example
+## Example config.json file
 
 So let's say I want to run centrifuge, I don't want to run hmms, and I want my minimum contig length for megahit and anvi-profile to be 500 and and 3,000 respectively. Then my config file would like like this:
 
@@ -268,24 +313,6 @@ So let's say I want to run centrifuge, I don't want to run hmms, and I want my m
 		"min_contig_len": 500
 	}
 }
-```
-
-## Estimating occurence of population genomes in metagenomes (reference mode)
-
-Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
-In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using two `.txt` files: `samples.txt`, and `references.txt`. 
-
-`references.txt` should be a 2 column tab-separated file, where the first column specifies a reference name and the second column specifies the filepath of the fasta file for that reference. An example `references.txt` can be found [here](mock_files_for_merenlab_metagenomics_pipeline/references.txt).
-
-
-The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used (aka the name of the reference as defined in `references.txt`). If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
-
-![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
-
-After properly formatting your `samples.txt` and `references.txt`, reference mode is initiated by adding this to your `config.json`:
-
-```
-"references_txt": "references.txt"
 ```
 
 ## Wrappers
