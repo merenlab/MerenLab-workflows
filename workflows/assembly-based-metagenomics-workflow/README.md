@@ -2,16 +2,17 @@
 
 # contents
 
-- [Introduction](#Introduction)
-- [Standard Usage](#Standard-usage)
-- [Running the workflow on a cluster](#Running-the-workflow on-a-cluster)
-- [The config file](#The-config-file)
-	- [General configurations](#General-configurations)
-		- [Output Directories](#Output-directories)
-		- [The "all against all" option](#The-"all-against-all"-option)
-		- [Defining the number of threads per rule in a cluster](#Defining-the-number-of-threads-per-rule-in-a-cluster)
-		- [Optional Steps](#Optional-steps)
-	- [Step-Specific Configurations](#Step-specific-configurations)
+- [Introduction](#introduction)
+- [Standard Usage](#standard-usage)
+- [Reference Mode](#reference-mode)
+- [Running the workflow on a cluster](#running-the-workflow-on-a-cluster)
+	- [Defining the number of threads per rule in a cluster](#defining-the-number-of-threads-per-rule-in-a-cluster)
+- [The config file](#the-config-file)
+	- [General configurations](#general-configurations)
+		- [Output Directories](#output-directories)
+		- [The "all against all" option](#the-all-against-all-option)
+		- [Optional Steps](#optional-steps)
+	- [Step-Specific Configurations](#step-specific-configurations)
 		- [QC](#qc)
 		- [reformat_fasta](#reformat_fasta)
 		- [megahit](#megahit)
@@ -21,8 +22,7 @@
 		- [anvi_profile](#anvi_profile)
 		- [samtools_view](#samtools_view)
 		- [bowtie](#bowtie)
-	- [Example config.json file](#Example-config.json-file)
-- [Reference Mode](#Reference-Mode)
+	- [Example config.json file](#example-configjson-file)
 
 # Introduction
 
@@ -66,11 +66,57 @@ The `samples.txt` file specifies the names of your samples and which group they 
 
 The defalt name for your samples file is `samples.txt`, but you can use a different name by specifying it in the config file (see below).
 
+# Reference Mode
+## Estimating occurence of population genomes in metagenomes
+
+Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
+In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using two `.txt` files: `samples.txt`, and `references.txt`. 
+
+`references.txt` should be a 2 column tab-separated file, where the first column specifies a reference name and the second column specifies the filepath of the fasta file for that reference. An example `references.txt` can be found [here](mock_files_for_merenlab_metagenomics_pipeline/references.txt).
+
+
+The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used (aka the name of the reference as defined in `references.txt`). If the `samples.txt` files doesn't have a `group` column, then an ["all against all"](#the-all-against-all-option) mode would be provoked. Below you can see how the DAG looks like for this mode:
+
+![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
+
+After properly formatting your `samples.txt` and `references.txt`, reference mode is initiated by adding this to your `config.json`:
+
+```
+"references_txt": "references.txt"
+```
+
 # Running the workflow on a cluster
 
 When submitting to a cluster, you can utilize the [snakemake cluster execution](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution). Notice that the number of threads per rule could be changed using the `config.json` file (and not by using the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file). For more details, refer to the documentation of the configuration file below.
 
 When submitting a workflow to a cluster, snakemake requires you to limit the number of jobs using `--jobs`. If you prefer to limit the number of threads that would be used by your workflow (for example, if you share your cluster with others and you don't want to consume all resources), then you can make use of the snakemake built-in `resources` directive. You can set the number of jobs to your limit (or to a very big number if you dont care), and use `--resources nodes=30`, if you wish to only use 30 threads. We used the word `nodes` so that to not confuse with the reserved word `threads` in snakemake.
+
+## Defining the number of threads per rule in a cluster
+
+In order to change the number of threads per rule when running on a cluster, the following structure should be used: 
+
+```
+	"rule_name":
+		"threads": number_of_threads
+```
+
+The following defaults have been set:
+
+**rule**|**threads**
+:-----:|:-----:
+qc|2
+megahit|11
+gen\_contigs\_db|5
+run\_centrifuge|5
+anvi\_run\_hmms|20
+anvi\_run_\ncbi\_cogs|20
+bowtie\_build|4
+bowtie|10
+samtools\_view|4
+anvi\_init\_bam|4
+anvi\_profile|5
+
+All other rules use 1 thread by default.
 
 ## A note on cluster-config
 
@@ -125,52 +171,6 @@ An updated DAG for the workflow for our mock data is available below:
 ![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-all-against-all.png?raw=true "mock-dag-all-against-all")
 
 A little more of a mess! But also has a beauty to it :-).
-
-# Reference Mode
-## Estimating occurence of population genomes in metagenomes
-
-Along with assembly-based metagenomics, we often use anvi'o to explore the occurence of population genomes accross metagenomes. You can see a nice example of that here: [Please insert a nice example here. Probably the blog about DWH thingy](link-to-nice-example).
-In that case, what you have is a bunch of fastq files (metagenomes) and fasta files (reference genomes), and all you need to do is to let the workflow know where to find these files, using two `.txt` files: `samples.txt`, and `references.txt`. 
-
-`references.txt` should be a 2 column tab-separated file, where the first column specifies a reference name and the second column specifies the filepath of the fasta file for that reference. An example `references.txt` can be found [here](mock_files_for_merenlab_metagenomics_pipeline/references.txt).
-
-
-The `samples.txt` stays as before, but this time the `group` column will specify for each sample, which reference should be used (aka the name of the reference as defined in `references.txt`). If the `samples.txt` files doesn't have a `group` column, then an "all against all" mode would be provoked. Below you can see how the DAG looks like for this mode:
-
-![alt text](mock_files_for_merenlab_metagenomics_pipeline/mock-dag-references-mode.png?raw=true "mock-dag-references-mode")
-
-After properly formatting your `samples.txt` and `references.txt`, reference mode is initiated by adding this to your `config.json`:
-
-```
-"references_txt": "references.txt"
-```
-
-### Defining the number of threads per rule in a cluster
-
-In order to change the number of threads per rule when running on a cluster, the following structure should be used: 
-
-```
-	"rule_name":
-		"threads": number_of_threads
-```
-
-The following defaults have been set:
-
-**rule**|**threads**
-:-----:|:-----:
-qc|2
-megahit|11
-gen\_contigs\_db|5
-run\_centrifuge|5
-anvi\_run\_hmms|20
-anvi\_run_\ncbi\_cogs|20
-bowtie\_build|4
-bowtie|10
-samtools\_view|4
-anvi\_init\_bam|4
-anvi\_profile|5
-
-All other rules use 1 thread by default.
 
 ### Optional steps
 
