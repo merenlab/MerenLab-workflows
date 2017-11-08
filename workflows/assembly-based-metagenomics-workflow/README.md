@@ -1,5 +1,14 @@
 # Snakemake workflow for assembly based metagenomics
 
+
+
+
+
+
+
+
+
+
 # contents
 
 - [Introduction](#introduction)
@@ -66,6 +75,8 @@ The `samples.txt` file specifies the names of your samples and which group they 
 
 The defalt name for your samples file is `samples.txt`, but you can use a different name by specifying it in the config file (see below).
 
+[Back to Table of Contents](#contents)
+
 # Reference Mode
 ## Estimating occurence of population genomes in metagenomes
 
@@ -84,6 +95,8 @@ After properly formatting your `samples.txt` and `references.txt`, reference mod
 ```
 "references_txt": "references.txt"
 ```
+
+[Back to Table of Contents](#contents)
 
 # Running the workflow on a cluster
 
@@ -122,6 +135,8 @@ All other rules use 1 thread by default.
 
 This note is here mainly for documentation of the code, and for those of you who are interested in snakemake. The reason we decided not to use the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file to control the number of threads per rule, is becuase certain software require the number of threads as an input (for example `megahit` and `anvi-profile`), but the cluster config file is not available for shell commands within snakemake rules. To bypass this issue we simply put the threads configuration in the `config.json`, thus available for the user to modify.
 
+[Back to Table of Contents](#contents)
+
 # The config file
 
 To make changes easy and accessible for the user, we tried our best to make all relevant configurations available to the user through a `JSON` formatted config file, and thus avoiding the need to change the Snakefile. An example config file is [here](mock_files_for_merenlab_metagenomics_pipeline/config.json). There are some general configurations, and there are step specific configurations.
@@ -156,6 +171,8 @@ When using the "references mode" (see below) the default name for the `ASSEMBLY_
 
 You can change all, or just some of the names of these output folders. And you can provide an absolute or a relative path for them.
 
+[Back to Table of Contents](#contents)
+
 ### The "all against all" option
 
 The default behaviour for this workflow is to create a contigs database for each _group_ and map (and profile, and merge) the samples that belong to that _group_. If you wish to map all samples to all contigs, use the `all_against_all` option in the config file:
@@ -172,6 +189,8 @@ An updated DAG for the workflow for our mock data is available below:
 
 A little more of a mess! But also has a beauty to it :-).
 
+[Back to Table of Contents](#contents)
+
 ### Optional steps
 
 The following steps are only optional:
@@ -182,6 +201,8 @@ The following steps are only optional:
 4. Reformating the labels of the fasta files with `anvi-script-reformat-fasta` (default is **running**).
 
 For more details refer to the specific documentation for these steps below.
+
+[Back to Table of Contents](#contents)
 
 ## Step-specific configurations 
 
@@ -223,6 +244,8 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile --until gzip_fast
 
 To understand this better, refer to the snakemake documentation.
 
+[Back to Table of Contents](#contents)
+
 ### reformat_fasta
 
 In "references mode", you may choose to skip this step, and keep your contigs names. In order to do so, add this to your config file:
@@ -235,6 +258,8 @@ In "references mode", you may choose to skip this step, and keep your contigs na
 
 In assembly mode, this rule is always excecuted.
 
+[Back to Table of Contents](#contents)
+
 ### megahit
 
 The following parameters are available:
@@ -243,15 +268,21 @@ The following parameters are available:
 
 `min_contig_len` (`--min-contig-len`) - default is 1,000.
 
+[Back to Table of Contents](#contents)
+
 ### run_centrifuge
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run centrifuge or not. The default is `false`.
 
 `db` - if you choose run centrifuge, you **must** provide the path to the database (for example `$CENTRIFUGE_BASE/p+h+v/p+h+v`).
 
+[Back to Table of Contents](#contents)
+
 ### anvi_run_hmms
 
 `run` - could get values of `true` or `false` (all lower case!) - to configure whether to run hmms or not. The default is `true`.
+
+[Back to Table of Contents](#contents)
 
 ### anvi_run_ncbi_cogs
 
@@ -279,18 +310,25 @@ Example:
 		"threads": 1
 ```
 
+[Back to Table of Contents](#contents)
+
 ### anvi_profile
 
 `min_contig_length` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
+
+[Back to Table of Contents](#contents)
 
 ### samtools_view
 
 `s` - the samtools command executed is `samtools view {additional_params} -bS {stuff} -o {stuff}`, where `additional_params` specifies what goes in place of `{additional_params}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all options that aren't `-bS` or `-o` with `additional_params`. For example, you could set `view_flag` to be `-f 2`, or `-f 2 -q 1` (for a full list see the samtools [documentation](http://www.htslib.org/doc/samtools.html)). The default is `-F 4`.
 
+[Back to Table of Contents](#contents)
+
 ### bowtie
 
 `additional_params` - the bowtie2 command executed is `bowtie2 --threads {stuff} -x {stuff} -1 {stuff} -2 {stuff} {additional_params} -S {stuff}`, where `additional_params` specifies what goes in place of `{additional_params}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all parameters that aren't `--threads`, `-x`, `-1`, `-2`, or `-S` with `additional_params`. For example, if you don't want gapped alignment (aka the reference does not recruit any reads that contain indels with respect to it), and you don't want to store unmapped reads in the SAM output file, set `additional_params` to be `--rfg 10000,10000 --no-unal` (for a full list of options see the bowtie2 [documentation](http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#options)). The default is `--no-unal`.
 
+[Back to Table of Contents](#contents)
 
 ## Example config.json file
 
@@ -315,6 +353,10 @@ So let's say I want to run centrifuge, I don't want to run hmms, and I want my m
 }
 ```
 
+[Back to Table of Contents](#contents)
+
 ## Wrappers
 
 *(soon)*
+
+[Back to Table of Contents](#contents)
