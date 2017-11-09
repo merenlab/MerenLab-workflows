@@ -131,6 +131,8 @@ anvi\_profile|5
 
 All other rules use 1 thread by default.
 
+Notice: if you want to use multiple threads, don't forget to include `--cores` in your snakemake command line. For more information, refer to [this section](http://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads) of the snakemake documentation.
+
 ## A note on cluster-config
 
 This note is here mainly for documentation of the code, and for those of you who are interested in snakemake. The reason we decided not to use the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file to control the number of threads per rule, is becuase certain software require the number of threads as an input (for example `megahit` and `anvi-profile`), but the cluster config file is not available for shell commands within snakemake rules. To bypass this issue we simply put the threads configuration in the `config.json`, thus available for the user to modify.
