@@ -332,7 +332,7 @@ rule gzip_fastqs:
     shell: "gzip {input} >> {log} 2>&1"
 
 
-def input_for_megahit(wildcards):
+def input_for_assembler(wildcards):
     ''' Creating a dictionary containing the path to input fastq file. '''
     if A(['qc', 'run'], config, True):
         # by default, use the output of the qc
@@ -355,7 +355,7 @@ rule megahit:
     '''
     version: 1.0
     log: dirs_dict["LOGS_DIR"] + "/{group}-megahit.log"
-    input: unpack(input_for_megahit)
+    input: unpack(input_for_assembler)
     params:
         # the minimum length for contigs (smaller contigs will be discarded)
         min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
