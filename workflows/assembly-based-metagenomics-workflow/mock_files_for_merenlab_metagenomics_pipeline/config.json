@@ -22,7 +22,7 @@
         "report_variability_full": false,
         "threads": 5
     },
-    "centrifuge":{
+    "run_centrifuge":{
         "run": true,
         "db": "$CENTRIFUGE_BASE/p+h+v/p+h+v"
     }
