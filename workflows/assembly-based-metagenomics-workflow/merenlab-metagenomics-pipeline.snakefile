@@ -880,7 +880,7 @@ rule anvi_merge:
             # if only one sample is not empty, but the group size was
             # bigger than 1 then it means that --cluster-contigs was
             # not performed during anvi-profile.
-            _message = "Only one samlpe had reads recruited to %s " \
+            _message = "Only one sample had reads recruited to %s " \
                        "and hence merging could not occur." \
                        % wildcards.group
             create_fake_output_files(_message, output)
