@@ -78,6 +78,10 @@ dirs_dict = dict(zip(dir_list, dir_names))
 # create log dir if it doesn't exist
 os.makedirs(dirs_dict["LOGS_DIR"], exist_ok=True)
 
+########################################
+# Helper functions
+########################################
+
 def A(_list, d, default_value = ""):
     '''
         A helper function to make sense of config details.
@@ -114,6 +118,9 @@ def B(_rule, _param, _default=''):
 # a helper function to get the user defined number of threads for a rule
 def T(rule_name, N=1): return A([rule_name,'threads'], config, default_value=N)
 
+########################################
+# Reading some definitions from config files (also some sanity checks)
+########################################
 for d in A("output_dirs", config):
     # renaming folders according to the config file, if the user specified.
     if d not in dir_list:
@@ -132,13 +139,26 @@ run_taxonomy_with_centrifuge = A(["run_centrifuge", "run"], config)
 run_anvi_run_hmms = A(["anvi_run_hmms", "run"], config, default_value=True)
 # default is running anvi_run_ncbi_cogs
 run_anvi_run_ncbi_cogs = A(["anvi_run_ncbi_cogs", "run"], config, default_value=True)
-# Sanity check for centrifuge db
+# sanity check for centrifuge db
 if run_taxonomy_with_centrifuge:
     if not A(["run_centrifuge", "db"], config):
         raise ConfigError("If you plan to run centrifuge, then you must "\
                           "provide a path for the centrifuge db in the "\
                           "config file. See documentation for more details.")
 
+# sanity check for requested assembly
+# make sure that the user is not requesting multiple assemblers
+available_assemblers = ['megahit', 'idba_ud']
+number_of_assemblers_in_config_file = 0
+assembly_software_in_config = list()
+for a in available_assemblers:
+    if A([a, 'run'], config):
+        number_of_assemblers_in_config_file += 1
+        assembly_software_in_config.append(a)
+if number_of_assemblers_in_config_file > 1:
+    raise ConfigError("This workflow supports the usage of only one assembly"\
+                        "software, yet all the following software are" \
+                        "included in your config file: %s" % assembly_software_in_config)
 
 # loading the samples.txt file
 # The default samples file is samples.txt
@@ -346,47 +366,69 @@ def input_for_assembler(wildcards):
     return {'r1': r1, 'r2': r2}
 
 
-rule megahit:
-    '''
-        Assembling fastq files using megahit.
+if A(['idba_ud', 'run'], config):
+    rule idba_ud:
+        version: 1.0
+        log: dirs_dict["LOGS_DIR"] + "/{group}-idba_ud.log"
+        input: unpack(input_for_assembler)
+        output:
+            temp_dir = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"),
+            contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
+        params:
+            # the minimum length for contigs (smaller contigs will be discarded)
+            min_contig_len = int(A(["idba_ud", "min_contig"], config, default_value="1000")),
+        threads: T('idba_ud', 11)
+        resources: nodes = T('idba_ud', 11)
+        run:
+            cmd = "idba_ud -o {output.temp_dir} --read {input.fasta}" + \ 
+                    " --min_contig {params.min_contig}" + \ 
+                    " --num_threads {threads} >> {log} 2>&1"
+            shell(cmd)
+            shell("mv {output.temp_dir}/contig.fa {output.contigs} >> {log} 2>&1")
 
-        All files created by megahit are stored in a temporary folder,
-        and only the fasta file is kept for later analysis.
-    '''
-    version: 1.0
-    log: dirs_dict["LOGS_DIR"] + "/{group}-megahit.log"
-    input: unpack(input_for_assembler)
-    params:
-        # the minimum length for contigs (smaller contigs will be discarded)
-        min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
-        # portion of total memory to use by megahit
-        memory = float(A(["megahit", "memory"], config, default_value=0.4))
-    # Notice that megahit requires a directory to be specified as
-    # output. If the directory already exists then megahit will not
-    # run. To avoid this, the for megahit is a temporary directory,
-    # once megahit is done running then the contigs database is moved
-    # to the final location.
-    output:
-        temp_dir = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"),
-        contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
-    threads: T('megahit', 11)
-    resources: nodes = T('megahit', 11),
-    # Making this rule a shadow rule so all extra files created by megahit
-    # are not retaineded (it is not enough to define the directory as temporary
-    # because when failing in the middle of a run, snakemake doesn't delete directories)
-    run:
-        r1 = ','.join(input.r1)
-        r2 = ','.join(input.r2)
 
-        cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
-            " --min-contig-len {params.min_contig_len}" + \
-            " -m {params.memory}" + \
-            " -o {output.temp_dir}" + \
-            " -t {threads}" + \
-            " >> {log} 2>&1"
-        print("Running: %s" % cmd)
-        shell(cmd)
-        shell("mv {output.temp_dir}/final.contigs.fa {output.contigs} >> {log} 2>&1")
+if A(['megahit', 'run'], config):
+    rule megahit:
+        '''
+            Assembling fastq files using megahit.
+
+            All files created by megahit are stored in a temporary folder,
+            and only the fasta file is kept for later analysis.
+        '''
+        version: 1.0
+        log: dirs_dict["LOGS_DIR"] + "/{group}-megahit.log"
+        input: unpack(input_for_assembler)
+        params:
+            # the minimum length for contigs (smaller contigs will be discarded)
+            min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
+            # portion of total memory to use by megahit
+            memory = float(A(["megahit", "memory"], config, default_value=0.4))
+        # Notice that megahit requires a directory to be specified as
+        # output. If the directory already exists then megahit will not
+        # run. To avoid this, the for megahit is a temporary directory,
+        # once megahit is done running then the contigs database is moved
+        # to the final location.
+        output:
+            temp_dir = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"),
+            contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
+        threads: T('megahit', 11)
+        resources: nodes = T('megahit', 11),
+        # Making this rule a shadow rule so all extra files created by megahit
+        # are not retaineded (it is not enough to define the directory as temporary
+        # because when failing in the middle of a run, snakemake doesn't delete directories)
+        run:
+            r1 = ','.join(input.r1)
+            r2 = ','.join(input.r2)
+
+            cmd = "megahit -1 %s -2 %s" % (r1, r2) + \
+                " --min-contig-len {params.min_contig_len}" + \
+                " -m {params.memory}" + \
+                " -o {output.temp_dir}" + \
+                " -t {threads}" + \
+                " >> {log} 2>&1"
+            print("Running: %s" % cmd)
+            shell(cmd)
+            shell("mv {output.temp_dir}/final.contigs.fa {output.contigs} >> {log} 2>&1")
 
 
 def get_raw_fasta(wildcards):

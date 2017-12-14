@@ -13,6 +13,7 @@
         "run": false
     },
     "megahit":{
+        "run": true,
         "memory": 0.4,
         "min_contig_len": 1000
     },
