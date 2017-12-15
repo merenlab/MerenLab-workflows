@@ -18,17 +18,25 @@ cp ../merenlab-metagenomics-pipeline.snakefile $output_dir
 cp -R ../wrappers/ $output_dir/wrappers/
 cp ../mock_files_for_merenlab_metagenomics_pipeline/*json $output_dir
 cp -R ../mock_files_for_merenlab_metagenomics_pipeline/three_samples_example/ $output_dir/three_samples_example/
-cp ../mock_files_for_merenlab_metagenomics_pipeline/samples.txt $output_dir
+cp ../mock_files_for_merenlab_metagenomics_pipeline/samples*.txt $output_dir
 cp ../mock_files_for_merenlab_metagenomics_pipeline/references.txt $output_dir
-cp ../mock_files_for_merenlab_metagenomics_pipeline/samples-no-groups.txt $output_dir
 
 # we have to go into the test directory because snakemake requires you run the command from the directory where the snakemake is
 cd $output_dir
 
 
-INFO "Call snakefile" $2
+INFO "Call snakefile with megahit" $2
 snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           $cmd
+
+
+INFO "Call snakefile with idba_ud" $2
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
+          $cmd \
+          --config output_dirs='{"MERGE_DIR": "06_MERGED_idba_ud"}' \
+          idba_ud='{"run": True}' \
+          megahit='{"run": False}'
+
 
 
 INFO "Call snakefile with all against all"
@@ -44,6 +52,25 @@ snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
           --config all_against_all=True \
           output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL_USING_RAW_INPUTS"}' \
           qc='{"run": False}'
+
+
+INFO "make a copy of all fastq.gz files"
+for f in `ls $output_dir/three_samples_example/*.fastq.gz`; do
+    s=$output_dir/three_samples_example/`echo $f | rev | cut -f 1 -d \/ | rev`
+    cp $f ${s%.fastq.gz}-for-idba_ud.fastq.gz
+done
+INFO "uncompress all copied fastq.gz files"
+gzip -d $output_dir/three_samples_example/*-for-idba_ud*gz
+
+INFO "Call snakefile with idba_ud with no qc" $2
+snakemake --snakefile merenlab-metagenomics-pipeline.snakefile \
+          $cmd \
+          --config all_against_all=True \
+          output_dirs='{"MERGE_DIR": "06_MERGED_ALL_AGAINST_ALL_USING_RAW_INPUTS"}' \
+          samples_txt='samples-for-idba_ud.txt' \
+          qc='{"run": False}' \
+          idba_ud='{"run": True}' \
+          megahit='{"run": False}'
 
 
 INFO "decompress mock reference files"

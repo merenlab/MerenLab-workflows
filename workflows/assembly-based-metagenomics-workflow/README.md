@@ -1,14 +1,5 @@
 # Snakemake workflow for assembly based metagenomics
 
-
-
-
-
-
-
-
-
-
 # contents
 
 - [Introduction](#introduction)
@@ -25,6 +16,7 @@
 		- [QC](#qc)
 		- [reformat_fasta](#reformat_fasta)
 		- [megahit](#megahit)
+		- [idba_ud](#idba_ud)
 		- [run_centrifuge](#run_centrifuge)
 		- [anvi_run_hmms](#anvi_run_hmms)
 		- [anvi_run_ncbi_cogs](#anvi_run_ncbi_cogs)
@@ -163,7 +155,7 @@ Don't like these names? You can specify what is the name of the folder, by provi
     }
 ```
 
-When using the "references mode" (see below) the default name for the `ASSEMBLY_DIR` is `02_REFERENCE_FASTA`. You can change the default name the following way:
+When using the "reference mode" (see below) the default name for the `ASSEMBLY_DIR` is `02_REFERENCE_FASTA`. You can change the default name the following way:
 
 ```
     "output_dirs":{
@@ -250,7 +242,7 @@ To understand this better, refer to the snakemake documentation.
 
 ### reformat_fasta
 
-In "references mode", you may choose to skip this step, and keep your contigs names. In order to do so, add this to your config file:
+In "reference mode", you may choose to skip this step, and keep your contigs names. In order to do so, add this to your config file:
 
 ```json
 	"reformat_fasta": {
@@ -264,13 +256,23 @@ In assembly mode, this rule is always excecuted.
 
 ### megahit
 
-The following parameters are available:
+`run` - You must specify this (`run: true`), otherwise you would probably get an error message. Notice that your config file should only include one assembly software, if it includes two, you would get an error message.
 
 `memory` (see `-m/--memory` in the megahit documentation) - The default is 0.4.
 
 `min_contig_len` (`--min-contig-len`) - default is 1,000.
 
 [Back to Table of Contents](#contents)
+
+### idba_ud
+
+`run` - You must specify this (`run: true`), otherwise you would probably get an error message. Notice that your config file should only include one assembly software, if it includes two, you would get an error message.
+
+`min_contig` - default is 1,000.
+
+**Important**: if you are using `idba_ud` together, and you are skipping qc, then your fastq files must be uncompressed. This is because you will simply be providing a path to the pair of fastq files, and hence there would be no easy way for us to know that they are compresed or not, and in which format they are.
+
+Another thing to note regarding `idba_ud` is that it requires a single fasta as an input. Because of that, what we do is use `fq2fa` to merge the pair of reads of each sample to one fasta, and then we use `cat` to concatenate multiple samples for a co-assembly. The `fasta` file that is created is create as a temporary file, and is deleted once `idba_ud` finishes running. If this is annoying to you, then feel free to contact us or just hack it yourself.
 
 ### run_centrifuge
 

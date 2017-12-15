@@ -156,9 +156,9 @@ for a in available_assemblers:
         number_of_assemblers_in_config_file += 1
         assembly_software_in_config.append(a)
 if number_of_assemblers_in_config_file > 1:
-    raise ConfigError("This workflow supports the usage of only one assembly"\
-                        "software, yet all the following software are" \
-                        "included in your config file: %s" % assembly_software_in_config)
+    raise ConfigError("This workflow supports the usage of only one assembly "\
+                        "software, yet all the following software are " \
+                        "included in your config file: %s. Please include only one." % assembly_software_in_config)
 
 # loading the samples.txt file
 # The default samples file is samples.txt
@@ -264,6 +264,30 @@ def get_raw_fastq(wildcards):
     return {'r1': r1, 'r2': r2}
 
 
+def get_fastq(wildcards):
+    ''' return the pair of compressed fastq files for a sample.
+        
+        There are two types of sources for the fastq:
+            1. The output of QC.
+            2. From the specified paths in samples.txt (in the case the user
+                                                        chose to skip QC).
+        This helper function returns the appropriate paths according to the
+        config file.
+    '''
+    d = {}
+    if A(['qc', 'run'], config, True):
+        # by default, use the output of the qc
+        d['r1'] = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
+        d['r2'] = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
+        
+    else:
+        # if no qc is requested, use raw input
+        # FIXME: it seems to me like the next two lines could have been replaced by: d = get_raw_fastq(wildcards)
+        d['r1'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r1'])
+        d['r2'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r2'])
+    return d
+
+
 def input_for_qc(wildcards):
     ''' return a dict with input for qc rule'''
     d = {'ini': ancient(dirs_dict["QC_DIR"] + "/%s.ini" % wildcards.sample)}
@@ -352,7 +376,71 @@ rule gzip_fastqs:
     shell: "gzip {input} >> {log} 2>&1"
 
 
-def input_for_assembler(wildcards):
+def input_for_fq2fa(wildcards):
+    ''' return the pair of uncompressed fastq files for a sample.
+        
+        See the documentation for get_fastq to understand why we need this.
+        This function is different from get_fastq because in this case,
+        we use the uncompressed output of QC instead of the compressed,
+        because fq2fa expects uncompressed files.
+    '''
+    d = {}
+    if A(['qc', 'run'], config, True):
+        # by default, use the output of the qc
+        d['r1'] = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
+        d['r2'] = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
+        
+    else:
+        # if no qc is requested, use raw input
+        # FIXME: it seems to me like the next two lines could have been replaced by: d = get_raw_fastq(wildcards)
+        d['r1'] = samples_information[samples_information["sample"] == wildcards.sample]['r1']
+        d['r2'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r2'])
+    return d
+
+
+rule fq2fa:
+    version: 1.0
+    log: dirs_dict["LOGS_DIR"] + "/{sample}-fq2fa.log"
+    input: unpack(input_for_fq2fa)
+    output: temp(dirs_dict["QC_DIR"] + "/{sample}-merged-reads.fa")
+    threads: T('fq2fa', 1)
+    resources: nodes = T('fq2fa', 1)
+    shell: "fq2fa --merge {input} {output} >> {log} 2>&1"
+
+
+rule merge_fastas_for_co_assembly:
+    version: 1.0
+    log: dirs_dict["LOGS_DIR"] + "/{group}-merge_fastas_for_co_assembly.log"
+    input: lambda wildcards: expand("{DIR}/{sample}-merged-reads.fa", DIR=dirs_dict["QC_DIR"], sample=list(samples_information[samples_information["group"] == wildcards.group]["sample"]))
+    output: temp(dirs_dict["QC_DIR"] + "/{group}-merged.fa")
+    threads: T('merge_fastas_for_co_assembly', 1)
+    resources: nodes = T('merge_fastas_for_co_assembly', 1)
+    shell: "cat {input} > {output} >> {log} 2>&1"
+
+
+if A(['idba_ud', 'run'], config):
+    rule idba_ud:
+        version: 1.0
+        log: dirs_dict["LOGS_DIR"] + "/{group}-idba_ud.log"
+        input:
+            fasta = dirs_dict["QC_DIR"] + "/{group}-merged.fa"
+        output:
+            temp_dir = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"),
+            contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
+        params:
+            # the minimum length for contigs (smaller contigs will be discarded)
+            min_contig = int(A(["idba_ud", "min_contig"], config, default_value="1000")),
+        threads: T('idba_ud', 11)
+        resources: nodes = T('idba_ud', 11)
+        run:
+            cmd = "idba_ud -o {output.temp_dir} --read {input.fasta}" + \ 
+                    " --min_contig {params.min_contig}" + \ 
+                    " --num_threads {threads} >> {log} 2>&1"
+            shell(cmd)
+            shell("mv {output.temp_dir}/contig.fa {output.contigs} >> {log} 2>&1")
+
+
+def input_for_megahit(wildcards):
     ''' Creating a dictionary containing the path to input fastq file. '''
     if A(['qc', 'run'], config, True):
         # by default, use the output of the qc
@@ -366,27 +454,6 @@ def input_for_assembler(wildcards):
     return {'r1': r1, 'r2': r2}
 
 
-if A(['idba_ud', 'run'], config):
-    rule idba_ud:
-        version: 1.0
-        log: dirs_dict["LOGS_DIR"] + "/{group}-idba_ud.log"
-        input: unpack(input_for_assembler)
-        output:
-            temp_dir = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}_TEMP"),
-            contigs = temp(dirs_dict["ASSEMBLY_DIR"] + "/{group}/final.contigs.fa")
-        params:
-            # the minimum length for contigs (smaller contigs will be discarded)
-            min_contig_len = int(A(["idba_ud", "min_contig"], config, default_value="1000")),
-        threads: T('idba_ud', 11)
-        resources: nodes = T('idba_ud', 11)
-        run:
-            cmd = "idba_ud -o {output.temp_dir} --read {input.fasta}" + \ 
-                    " --min_contig {params.min_contig}" + \ 
-                    " --num_threads {threads} >> {log} 2>&1"
-            shell(cmd)
-            shell("mv {output.temp_dir}/contig.fa {output.contigs} >> {log} 2>&1")
-
-
 if A(['megahit', 'run'], config):
     rule megahit:
         '''
@@ -397,7 +464,7 @@ if A(['megahit', 'run'], config):
         '''
         version: 1.0
         log: dirs_dict["LOGS_DIR"] + "/{group}-megahit.log"
-        input: unpack(input_for_assembler)
+        input: unpack(input_for_megahit)
         params:
             # the minimum length for contigs (smaller contigs will be discarded)
             min_contig_len = int(A(["megahit", "min_contig_len"], config, default_value="1000")),
@@ -653,16 +720,7 @@ def input_for_bowtie(wildcards):
     '''Creating a dictionary containing the input files for bowtie.'''
     d = {'build_output': rules.bowtie_build.output}
     # add the fastq files paths to the dictionary:
-    if A(['qc', 'run'], config, True):
-        # by default, use the output of the qc
-        d['r1'] = expand("{DIR}/{sample}-QUALITY_PASSED_R1.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
-        d['r2'] = expand("{DIR}/{sample}-QUALITY_PASSED_R2.fastq.gz", DIR=dirs_dict["QC_DIR"], sample=wildcards.sample)
-        
-    else:
-        # if no qc is requested, use raw input
-        d['r1'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r1'])
-        d['r2'] = list(samples_information[samples_information["sample"] == wildcards.sample]['r2'])
-    
+    d.update(get_fastq(wildcards))
     return d
 
 
