@@ -415,7 +415,7 @@ rule merge_fastas_for_co_assembly:
     output: temp(dirs_dict["QC_DIR"] + "/{group}-merged.fa")
     threads: T('merge_fastas_for_co_assembly', 1)
     resources: nodes = T('merge_fastas_for_co_assembly', 1)
-    shell: "cat {input} > {output} >> {log} 2>&1"
+    shell: "cat {input} > {output}"
 
 
 if A(['idba_ud', 'run'], config):
