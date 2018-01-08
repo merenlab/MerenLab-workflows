@@ -344,7 +344,7 @@ rule gen_qc_report:
              'FAILED_REASON_C33',
              'FAILED_REASON_C33 (percent of all failed pairs)']
         for filename in input:
-            sample = filename.split("-STATS.txt")[0]
+            sample = os.path.basename(filename).split("-STATS.txt")[0]
             report_dict[sample] = dict.fromkeys(report_column_headers, 0)
             with open(filename,'r') as f:
                 firstline = True
