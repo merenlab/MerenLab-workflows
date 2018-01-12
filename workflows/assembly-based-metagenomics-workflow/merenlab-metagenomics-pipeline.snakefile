@@ -606,8 +606,7 @@ rule gen_contigs_db:
     # filtered.
     input: get_fasta
     output:
-        db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db",
-        aux = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.h5"
+        db = dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db"
     params: group = "{group}"
     threads: T('gen_contigs_db', 5)
     resources: nodes = T('gen_contigs_db', 5),
@@ -777,8 +776,7 @@ rule anvi_profile:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(dirs_dict["CONTIGS_DIR"] + "/{group}-contigs.db")
     output:
-        profile = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db",
-        aux = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/AUXILIARY-DATA.h5",
+        profile = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/PROFILE.db"
         runlog = dirs_dict["PROFILE_DIR"] + "/{group}/{sample}/RUNLOG.txt"
     params:
         # minimal length of contigs to include in the profiling
@@ -881,8 +879,7 @@ rule anvi_merge:
         # this is here just so snakemake would run the gen_qc_report before running this rule
         qc_report = rules.gen_qc_report.output if A(['qc', 'run'], config, True) else ancient(rules.gen_contigs_db.output.db)
     output:
-        profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db",
-        aux = dirs_dict["MERGE_DIR"] + "/{group}/AUXILIARY-DATA.h5",
+        profile = dirs_dict["MERGE_DIR"] + "/{group}/PROFILE.db"
         runlog = dirs_dict["MERGE_DIR"] + "/{group}/RUNLOG.txt"
     threads: T('anvi_merge')
     resources: nodes = T('anvi_merge'),
