@@ -20,9 +20,10 @@
 		- [run_centrifuge](#run_centrifuge)
 		- [anvi_run_hmms](#anvi_run_hmms)
 		- [anvi_run_ncbi_cogs](#anvi_run_ncbi_cogs)
-		- [anvi_profile](#anvi_profile)
 		- [samtools_view](#samtools_view)
 		- [bowtie](#bowtie)
+		- [anvi_profile](#anvi_profile)
+		- [anvi_merge](#anvi_merge)
 	- [Example config.json file](#example-configjson-file)
 
 # Introduction
@@ -318,12 +319,6 @@ Example:
 
 [Back to Table of Contents](#contents)
 
-### anvi_profile
-
-`min_contig_length` - see anvi-profile documentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
-
-[Back to Table of Contents](#contents)
-
 ### samtools_view
 
 `s` - the samtools command executed is `samtools view {additional_params} -bS {stuff} -o {stuff}`, where `additional_params` specifies what goes in place of `{additional_params}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all options that aren't `-bS` or `-o` with `additional_params`. For example, you could set `view_flag` to be `-f 2`, or `-f 2 -q 1` (for a full list see the samtools [documentation](http://www.htslib.org/doc/samtools.html)). The default is `-F 4`.
@@ -333,6 +328,18 @@ Example:
 ### bowtie
 
 `additional_params` - the bowtie2 command executed is `bowtie2 --threads {stuff} -x {stuff} -1 {stuff} -2 {stuff} {additional_params} -S {stuff}`, where `additional_params` specifies what goes in place of `{additional_params}` and `{stuff}` refers to stuff handled internally by our workflow (and therefore shouldn't be messed with). You can therefore specify all parameters that aren't `--threads`, `-x`, `-1`, `-2`, or `-S` with `additional_params`. For example, if you don't want gapped alignment (aka the reference does not recruit any reads that contain indels with respect to it), and you don't want to store unmapped reads in the SAM output file, set `additional_params` to be `--rfg 10000,10000 --no-unal` (for a full list of options see the bowtie2 [documentation](http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#options)). The default is `--no-unal`.
+
+[Back to Table of Contents](#contents)
+
+### anvi_profile
+
+`min_contig_length` - see anvi-profile docummentation for `--min-contig-length`. The default is going with the default of `anvi-profile` (which is 2,500).
+
+[Back to Table of Contents](#contents)
+
+### anvi_merge
+
+`skip_concoct_binning` - see the `anvi-merge` docummentation for `--skip-concoct-binning`.
 
 [Back to Table of Contents](#contents)
 
