@@ -70,6 +70,7 @@ progress = terminal.Progress()
 
 # The config file contains many essential configurations for the workflow
 configfile: "config.json"
+localrules: all, annotate_contigs_database
 # Setting the names of all directories
 dir_list = ["LOGS_DIR", "QC_DIR", "ASSEMBLY_DIR", "CONTIGS_DIR", "MAPPING_DIR", "PROFILE_DIR", "MERGE_DIR"]
 dir_names = ["00_LOGS", "01_QC", "02_ASSEMBLY", "03_CONTIGS", "04_MAPPING", "05_ANVIO_PROFILE", "06_MERGED"]
@@ -852,6 +853,26 @@ def remove_empty_profile_databases(profiles, group):
     return profiles
 
 
+rule annotate_contigs_database:
+    '''
+        This is a dummy rule and it is here just to guarantee that all
+        the contigs annotations will run (according to what was requested
+        in the config file). The main use is to use --until annotate_contigs_database
+        if you just want a contigs databases with all the annotations.
+    '''
+    version: 1.0
+    log: dirs_dict["LOGS_DIR"] + "/{group}-annotate_contigs_database.log"
+    input: 
+        # this is here just so snakemake would run the taxonomy before running this rule
+        taxonomy = rules.import_taxonomy.output if run_taxonomy_with_centrifuge else ancient(rules.gen_contigs_db.output.db),
+        # this is here just so snakemake would run the hmms before running this rule
+        hmms = rules.anvi_run_hmms.output if run_anvi_run_hmms else ancient(rules.gen_contigs_db.output.db),
+        # this is here just so snakemake would run the ncbi cogs before running this rule
+        cogs = rules.anvi_run_ncbi_cogs.output if run_anvi_run_ncbi_cogs else ancient(rules.gen_contigs_db.output.db),
+    output: touch(dirs_dict['CONTIGS_DIR'] + "/{group}-annotate_contigs_database.done")
+    shell: "touch {output} >> {log} 2>&1"
+
+
 rule anvi_merge:
     '''
         Run create a merged profile database.
@@ -869,13 +890,8 @@ rule anvi_merge:
     input:
         # marking the contigs.db as ancient in order to ignore timestamps.
         contigs = ancient(rules.gen_contigs_db.output.db),
+        contigs_annotated = rules.annotate_contigs_database.output,
         profiles = input_for_anvi_merge,
-        # this is here just so snakemake would run the taxonomy before running this rule
-        taxonomy = rules.import_taxonomy.output if run_taxonomy_with_centrifuge else ancient(rules.gen_contigs_db.output.db),
-        # this is here just so snakemake would run the hmms before running this rule
-        hmms = rules.anvi_run_hmms.output if run_anvi_run_hmms else ancient(rules.gen_contigs_db.output.db),
-        # this is here just so snakemake would run the ncbi cogs before running this rule
-        cogs = rules.anvi_run_ncbi_cogs.output if run_anvi_run_ncbi_cogs else ancient(rules.gen_contigs_db.output.db),
         # this is here just so snakemake would run the gen_qc_report before running this rule
         qc_report = rules.gen_qc_report.output if A(['qc', 'run'], config, True) else ancient(rules.gen_contigs_db.output.db)
     output:
