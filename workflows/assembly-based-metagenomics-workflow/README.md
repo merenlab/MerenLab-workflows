@@ -91,6 +91,16 @@ After properly formatting your `samples.txt` and `references.txt`, reference mod
 
 [Back to Table of Contents](#contents)
 
+# I only want to create a banch of contigs databases
+
+Regardless if you are running in [reference mode](#reference-mode) or not, you can decide you want to only create contigs databases and annotate them with functions, taxonomy, etc. If you want to do that then simply run the following:
+
+```bash
+snakemake -s merenlab-metagenomics-pipeline.snakefile --until annotate_contigs_database
+```
+
+This would create the contigs databases (and also run assembly if that's what is needed), and would run the annotations that were specified according to your config file.
+
 # Running the workflow on a cluster
 
 When submitting to a cluster, you can utilize the [snakemake cluster execution](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution). Notice that the number of threads per rule could be changed using the `config.json` file (and not by using the [cluster configuration](http://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution) file). For more details, refer to the documentation of the configuration file below.
