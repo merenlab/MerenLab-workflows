@@ -91,7 +91,7 @@ After properly formatting your `samples.txt` and `references.txt`, reference mod
 
 [Back to Table of Contents](#contents)
 
-# I only want to create a banch of contigs databases
+# I only want to create a bunch of contigs databases
 
 Regardless if you are running in [reference mode](#reference-mode) or not, you can decide you want to only create contigs databases and annotate them with functions, taxonomy, etc. If you want to do that then simply run the following:
 
