@@ -28,7 +28,7 @@
 
     Or without --cluster-config and on one line:
 
-    $ snakemake $METAPIPE/merenlab-metagenomics-pipeline.snakefile --cluster 'clusterize -n {threads} -log {log}' --jobs 4 --latency-wait 100 -p
+    $ snakemake --snakefile $METAPIPE/merenlab-metagenomics-pipeline.snakefile --cluster 'clusterize -n {threads} -log {log}' --jobs 4 --latency-wait 100 -p
 
     Note on rule order: whenever the order of rule execution was ambiguous
         mypreferred approach was to use the rule dependencies. See:
